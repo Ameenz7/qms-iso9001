@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qms-postgres
+    environment:
+      POSTGRES_USER: qms
+      POSTGRES_PASSWORD: qms
+      POSTGRES_DB: qms
+    ports:
+      - "5432:5432"
+    volumes:
+      - qms_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "qms"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: qms-backend
+    environment:
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: qms
+      DB_PASSWORD: qms
+      DB_NAME: qms
+      JWT_SECRET: change-me-in-production
+      JWT_EXPIRES_IN: 8h
+      SUPER_ADMIN_EMAIL: admin@qms.local
+      SUPER_ADMIN_PASSWORD: admin123
+      CORS_ORIGIN: http://localhost:4200
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: qms-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+volumes:
+  qms_pgdata:

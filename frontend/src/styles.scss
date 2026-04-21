@@ -1,0 +1,221 @@
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+// Notion-inspired palette
+$qms-primary: mat.m2-define-palette(mat.$m2-gray-palette, 900, 700, 900);
+$qms-accent: mat.m2-define-palette(mat.$m2-blue-palette, 600, 400, 800);
+$qms-warn: mat.m2-define-palette(mat.$m2-red-palette);
+
+$notion-typography: mat.m2-define-typography-config(
+  $font-family: '"Inter", "Helvetica Neue", Arial, sans-serif',
+);
+
+$qms-theme: mat.m2-define-light-theme((
+  color: (
+    primary: $qms-primary,
+    accent: $qms-accent,
+    warn: $qms-warn,
+  ),
+  typography: $notion-typography,
+  density: -1,
+));
+
+@include mat.all-component-themes($qms-theme);
+@include mat.all-component-typographies($notion-typography);
+
+// Quill rich-text editor base + snow theme
+@import 'quill/dist/quill.core.css';
+@import 'quill/dist/quill.snow.css';
+
+// ---- Notion-like design tokens ----
+:root {
+  --notion-bg: #ffffff;
+  --notion-panel: #ffffff;
+  --notion-sidebar: #fbfbfa;
+  --notion-text: #37352f;
+  --notion-text-muted: #787774;
+  --notion-border: #e9e9e7;
+  --notion-border-strong: #d3d1cb;
+  --notion-hover: #f1f1ef;
+  --notion-accent: #2383e2;
+  --notion-accent-soft: #e7f3fb;
+  --notion-danger: #e03e3e;
+  --notion-danger-soft: #fdecec;
+  --notion-success: #0f7b6c;
+  --notion-success-soft: #ddedea;
+  --notion-warning: #cb912f;
+  --notion-warning-soft: #fbf3db;
+  --notion-radius: 6px;
+  --notion-radius-lg: 8px;
+  --notion-shadow: 0 1px 2px rgba(15, 15, 15, 0.03), 0 3px 6px rgba(15, 15, 15, 0.04);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  background: var(--notion-bg);
+  color: var(--notion-text);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1, h2, h3, h4 {
+  color: var(--notion-text);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+h1 { font-size: 28px; }
+h2 { font-size: 20px; }
+h3 { font-size: 17px; }
+
+.page-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 48px;
+}
+
+.spacer { flex: 1 1 auto; }
+
+table.full-width { width: 100%; }
+
+// ---- Chips ----
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--notion-hover);
+  color: var(--notion-text);
+}
+.chip-ok      { background: var(--notion-success-soft) !important; color: var(--notion-success) !important; }
+.chip-warn    { background: var(--notion-warning-soft) !important; color: var(--notion-warning) !important; }
+.chip-danger  { background: var(--notion-danger-soft)  !important; color: var(--notion-danger)  !important; }
+.chip-info    { background: var(--notion-accent-soft)  !important; color: var(--notion-accent)  !important; }
+
+// ---- Material overrides for Notion look ----
+.mat-mdc-card {
+  background: var(--notion-panel) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--notion-border) !important;
+  border-radius: var(--notion-radius-lg) !important;
+}
+
+.mat-mdc-raised-button, .mat-mdc-unelevated-button, .mat-mdc-outlined-button,
+.mat-mdc-button, .mat-mdc-icon-button, .mat-mdc-button-base {
+  border-radius: var(--notion-radius) !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+}
+
+.mat-mdc-unelevated-button.mat-primary {
+  background-color: var(--notion-text) !important;
+  color: #fff !important;
+}
+.mat-mdc-unelevated-button.mat-primary:hover {
+  background-color: #000 !important;
+}
+
+.mat-mdc-outlined-button {
+  border-color: var(--notion-border-strong) !important;
+  color: var(--notion-text) !important;
+  background: #fff !important;
+}
+.mat-mdc-outlined-button:hover {
+  background: var(--notion-hover) !important;
+}
+
+.mat-toolbar {
+  background: #fff !important;
+  color: var(--notion-text) !important;
+  border-bottom: 1px solid var(--notion-border) !important;
+  height: 52px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+.mat-toolbar .spacer { flex: 1 1 auto; }
+
+.mat-mdc-form-field {
+  font-size: 14px !important;
+}
+
+.mat-mdc-dialog-surface {
+  border-radius: var(--notion-radius-lg) !important;
+  border: 1px solid var(--notion-border) !important;
+}
+.mat-mdc-dialog-title {
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.mat-expansion-panel {
+  background: #fff !important;
+  box-shadow: none !important;
+  border: 1px solid var(--notion-border) !important;
+  border-radius: var(--notion-radius) !important;
+  margin-bottom: 8px;
+}
+.mat-expansion-panel-header {
+  font-weight: 500 !important;
+}
+.mat-expansion-panel-header:hover {
+  background: var(--notion-hover) !important;
+}
+
+.mat-mdc-table {
+  background: transparent !important;
+}
+.mat-mdc-header-row {
+  background: var(--notion-sidebar) !important;
+  border-bottom: 1px solid var(--notion-border) !important;
+}
+.mat-mdc-header-cell {
+  color: var(--notion-text-muted) !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+.mat-mdc-row {
+  border-bottom: 1px solid var(--notion-border) !important;
+}
+.mat-mdc-row:hover {
+  background: var(--notion-hover) !important;
+}
+
+// ---- Quill editor Notion look ----
+.ql-toolbar.ql-snow {
+  border: 1px solid var(--notion-border) !important;
+  border-top-left-radius: var(--notion-radius) !important;
+  border-top-right-radius: var(--notion-radius) !important;
+  background: var(--notion-sidebar) !important;
+}
+.ql-container.ql-snow {
+  border: 1px solid var(--notion-border) !important;
+  border-top: none !important;
+  border-bottom-left-radius: var(--notion-radius) !important;
+  border-bottom-right-radius: var(--notion-radius) !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 14px !important;
+  min-height: 220px;
+}
+.ql-editor {
+  min-height: 220px;
+  line-height: 1.6;
+}
+.ql-editor.ql-blank::before {
+  font-style: normal !important;
+  color: var(--notion-text-muted) !important;
+}
+
+// Utility
+.text-muted { color: var(--notion-text-muted); }
