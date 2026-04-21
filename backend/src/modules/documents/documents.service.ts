@@ -95,16 +95,18 @@ export class DocumentsService {
       if (contentChanged) {
         doc.content = dto.content!;
         doc.version = doc.version + 1;
+      }
+      const saved = await trx.getRepository(QmsDocument).save(doc);
+      if (contentChanged) {
         const version = trx.getRepository(DocumentVersion).create({
-          documentId: doc.id,
-          version: doc.version,
-          content: doc.content,
+          documentId: saved.id,
+          version: saved.version,
+          content: saved.content,
           changeNote: dto.changeNote ?? null,
           createdById: actor.userId,
         });
         await trx.getRepository(DocumentVersion).save(version);
       }
-      const saved = await trx.getRepository(QmsDocument).save(doc);
       await this.audit.log(actor, 'update', 'Document', id, {
         contentChanged,
         status: dto.status,
