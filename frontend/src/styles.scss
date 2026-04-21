@@ -1,0 +1,61 @@
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+$qms-primary: mat.m2-define-palette(mat.$m2-indigo-palette);
+$qms-accent: mat.m2-define-palette(mat.$m2-cyan-palette, A200, A100, A400);
+$qms-warn: mat.m2-define-palette(mat.$m2-red-palette);
+
+$qms-theme: mat.m2-define-light-theme((
+  color: (
+    primary: $qms-primary,
+    accent: $qms-accent,
+    warn: $qms-warn,
+  ),
+  density: 0,
+));
+
+@include mat.all-component-themes($qms-theme);
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background: #f5f6fa;
+  color: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+table.full-width {
+  width: 100%;
+}
+
+.chip-ok {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+.chip-warn {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+.chip-danger {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+.chip-info {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+}
