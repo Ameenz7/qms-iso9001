@@ -1,16 +1,30 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { ApiService } from '../../core/api.service';
+import { exportCsv } from '../../core/export.util';
 import { AuditLog } from '../../core/models';
 
 @Component({
   selector: 'app-audit',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+  ],
   template: `
-    <h1>Audit Logs</h1>
+    <div class="header">
+      <h1>Audit Logs</h1>
+      <button mat-stroked-button (click)="exportAllCsv()">
+        <mat-icon>download</mat-icon> Export CSV
+      </button>
+    </div>
     <mat-card>
       <table mat-table [dataSource]="logs()" class="full-width">
         <ng-container matColumnDef="when">
@@ -42,12 +56,18 @@ import { AuditLog } from '../../core/models';
   `,
   styles: [
     `
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
       h1 {
-        margin: 0 0 16px;
+        margin: 0;
       }
       .empty {
         padding: 16px;
-        color: #64748b;
+        color: var(--notion-text-muted);
       }
       code {
         font-size: 12px;
@@ -62,5 +82,22 @@ export class AuditComponent {
 
   constructor() {
     this.api.listAuditLogs().subscribe((l) => this.logs.set(l));
+  }
+
+  exportAllCsv() {
+    const rows = this.logs().map((l) => ({
+      createdAt: l.createdAt,
+      action: l.action,
+      entity: l.entity,
+      entityId: l.entityId,
+      metadata: l.metadata ? JSON.stringify(l.metadata) : '',
+    }));
+    exportCsv(rows, 'audit-logs.csv', [
+      { key: 'createdAt', label: 'When' },
+      { key: 'action', label: 'Action' },
+      { key: 'entity', label: 'Entity' },
+      { key: 'entityId', label: 'Entity ID' },
+      { key: 'metadata', label: 'Details' },
+    ]);
   }
 }

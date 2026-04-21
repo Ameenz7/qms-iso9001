@@ -22,6 +22,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { exportCsv } from '../../core/export.util';
 import {
   Capa,
   NCSeverity,
@@ -177,9 +178,14 @@ export class NcLinkDialogComponent {
   template: `
     <div class="header">
       <h1>Non-Conformities</h1>
-      <button mat-flat-button color="primary" (click)="openSubmit()">
-        <mat-icon>add</mat-icon> Submit NC
-      </button>
+      <div class="header-actions">
+        <button mat-stroked-button (click)="exportAllCsv()">
+          <mat-icon>download</mat-icon> Export CSV
+        </button>
+        <button mat-flat-button color="primary" (click)="openSubmit()">
+          <mat-icon>add</mat-icon> Submit NC
+        </button>
+      </div>
     </div>
 
     <mat-card>
@@ -246,6 +252,10 @@ export class NcLinkDialogComponent {
         justify-content: space-between;
         margin-bottom: 16px;
       }
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
       h1 {
         margin: 0;
       }
@@ -254,14 +264,7 @@ export class NcLinkDialogComponent {
       }
       .empty {
         padding: 16px;
-        color: #64748b;
-      }
-      .chip {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 500;
+        color: var(--notion-text-muted);
       }
     `,
   ],
@@ -327,6 +330,29 @@ export class NonConformitiesComponent {
           }),
       });
     });
+  }
+
+  exportAllCsv() {
+    const rows = this.ncs().map((n) => ({
+      title: n.title,
+      area: n.area ?? '',
+      severity: n.severity,
+      status: n.status,
+      capa: n.capa?.code ?? '',
+      submittedBy: n.submittedBy
+        ? `${n.submittedBy.firstName} ${n.submittedBy.lastName}`
+        : '',
+      createdAt: n.createdAt,
+    }));
+    exportCsv(rows, 'non-conformities.csv', [
+      { key: 'title', label: 'Title' },
+      { key: 'area', label: 'Area' },
+      { key: 'severity', label: 'Severity' },
+      { key: 'status', label: 'Status' },
+      { key: 'capa', label: 'CAPA' },
+      { key: 'submittedBy', label: 'Submitted By' },
+      { key: 'createdAt', label: 'Created' },
+    ]);
   }
 
   openLink(nc: NonConformity) {

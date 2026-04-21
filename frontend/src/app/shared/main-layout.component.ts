@@ -49,7 +49,7 @@ interface NavItem {
         </mat-nav-list>
       </mat-sidenav>
       <mat-sidenav-content>
-        <mat-toolbar color="primary">
+        <mat-toolbar>
           <span>Quality Management</span>
           <span class="spacer"></span>
           <span class="user-info" *ngIf="user() as u">
@@ -72,36 +72,59 @@ interface NavItem {
         height: 100vh;
       }
       .sidenav {
-        width: 240px;
-        background: #0f172a;
-        color: #e2e8f0;
+        width: 248px;
+        background: var(--notion-sidebar);
+        color: var(--notion-text);
+        border-right: 1px solid var(--notion-border) !important;
       }
       .brand {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 18px 18px;
-        font-size: 18px;
+        gap: 8px;
+        padding: 14px 14px 10px;
+        font-size: 14px;
         font-weight: 600;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--notion-text);
       }
       .brand mat-icon {
-        color: #38bdf8;
+        color: var(--notion-text);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
       }
-      ::ng-deep .sidenav .mdc-list-item {
-        color: #e2e8f0 !important;
+      :host ::ng-deep .sidenav .mat-mdc-list-item {
+        color: var(--notion-text-muted) !important;
+        border-radius: 4px !important;
+        margin: 1px 6px !important;
+        width: calc(100% - 12px) !important;
+        height: 32px !important;
+        font-size: 14px !important;
       }
-      ::ng-deep .sidenav .active-link {
-        background: rgba(56, 189, 248, 0.15) !important;
-        color: #38bdf8 !important;
+      :host ::ng-deep .sidenav .mat-mdc-list-item .mdc-list-item__primary-text {
+        color: var(--notion-text-muted) !important;
+        font-size: 14px !important;
       }
-      ::ng-deep .sidenav .active-link .mdc-list-item__primary-text,
-      ::ng-deep .sidenav .active-link mat-icon {
-        color: #38bdf8 !important;
+      :host ::ng-deep .sidenav .mat-mdc-list-item mat-icon {
+        color: var(--notion-text-muted) !important;
+        font-size: 18px !important;
+        width: 18px !important;
+        height: 18px !important;
+      }
+      :host ::ng-deep .sidenav .mat-mdc-list-item:hover {
+        background: var(--notion-hover) !important;
+      }
+      :host ::ng-deep .sidenav .active-link {
+        background: var(--notion-hover) !important;
+      }
+      :host ::ng-deep .sidenav .active-link .mdc-list-item__primary-text,
+      :host ::ng-deep .sidenav .active-link mat-icon {
+        color: var(--notion-text) !important;
+        font-weight: 500 !important;
       }
       .user-info {
         margin-right: 12px;
-        font-size: 14px;
+        font-size: 13px;
+        color: var(--notion-text-muted);
       }
       .user-info small {
         opacity: 0.8;

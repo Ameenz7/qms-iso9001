@@ -21,6 +21,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { exportCsv } from '../../core/export.util';
 import { CAPAStatus, Capa, Role, UserRecord } from '../../core/models';
 
 @Component({
@@ -183,13 +184,18 @@ export class CapaDialogComponent {
   template: `
     <div class="header">
       <h1>Corrective & Preventive Actions</h1>
-      <button
-        mat-flat-button
-        color="primary"
-        *ngIf="canManage"
-        (click)="openNew()">
-        <mat-icon>add</mat-icon> New CAPA
-      </button>
+      <div class="header-actions">
+        <button mat-stroked-button (click)="exportAllCsv()">
+          <mat-icon>download</mat-icon> Export CSV
+        </button>
+        <button
+          mat-flat-button
+          color="primary"
+          *ngIf="canManage"
+          (click)="openNew()">
+          <mat-icon>add</mat-icon> New CAPA
+        </button>
+      </div>
     </div>
 
     <mat-card>
@@ -260,6 +266,10 @@ export class CapaDialogComponent {
         justify-content: space-between;
         margin-bottom: 16px;
       }
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
       h1 {
         margin: 0;
       }
@@ -268,14 +278,7 @@ export class CapaDialogComponent {
       }
       .empty {
         padding: 16px;
-        color: #64748b;
-      }
-      .chip {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 500;
+        color: var(--notion-text-muted);
       }
     `,
   ],
@@ -303,6 +306,27 @@ export class CapasComponent {
 
   refresh() {
     this.api.listCapas().subscribe((c) => this.capas.set(c));
+  }
+
+  exportAllCsv() {
+    const rows = this.capas().map((c) => ({
+      code: c.code,
+      title: c.title,
+      status: c.status,
+      dueDate: c.dueDate ?? '',
+      assignedTo: c.assignedTo
+        ? `${c.assignedTo.firstName} ${c.assignedTo.lastName}`
+        : '',
+      linkedNCs: c.nonConformities?.length ?? 0,
+    }));
+    exportCsv(rows, 'capas.csv', [
+      { key: 'code', label: 'Code' },
+      { key: 'title', label: 'Title' },
+      { key: 'status', label: 'Status' },
+      { key: 'dueDate', label: 'Due Date' },
+      { key: 'assignedTo', label: 'Assigned To' },
+      { key: 'linkedNCs', label: 'Linked NCs' },
+    ]);
   }
 
   statusChip(s: CAPAStatus): string {

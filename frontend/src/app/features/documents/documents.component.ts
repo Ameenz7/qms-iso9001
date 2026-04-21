@@ -16,17 +16,37 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { QuillEditorComponent } from 'ngx-quill';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import {
+  exportCsv,
+  exportDocx,
+  exportPdf,
+} from '../../core/export.util';
 import {
   DocumentStatus,
   QmsDocument,
   Role,
 } from '../../core/models';
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ indent: '-1' }, { indent: '+1' }],
+    ['blockquote', 'code-block'],
+    ['link'],
+    [{ align: [] }],
+    ['clean'],
+  ],
+};
 
 @Component({
   selector: 'app-document-dialog',
@@ -39,6 +59,7 @@ import {
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
+    QuillEditorComponent,
   ],
   template: `
     <h2 mat-dialog-title>
@@ -56,14 +77,11 @@ import {
             <input matInput formControlName="title" required />
           </mat-form-field>
         </div>
-        <mat-form-field appearance="outline">
-          <mat-label>Content</mat-label>
-          <textarea
-            matInput
-            rows="10"
-            formControlName="content"
-            required></textarea>
-        </mat-form-field>
+        <label class="editor-label">Content</label>
+        <quill-editor
+          formControlName="content"
+          [modules]="quillModules"
+          placeholder="Start writing the procedure…"></quill-editor>
         <ng-container *ngIf="data.doc">
           <mat-form-field appearance="outline">
             <mat-label>Change Note</mat-label>
@@ -96,7 +114,7 @@ import {
       .form {
         display: flex;
         flex-direction: column;
-        min-width: 600px;
+        min-width: 640px;
       }
       .row {
         display: flex;
@@ -105,12 +123,23 @@ import {
       .row mat-form-field {
         flex: 1;
       }
+      .editor-label {
+        font-size: 12px;
+        color: var(--notion-text-muted);
+        margin: 4px 0 6px;
+        font-weight: 500;
+      }
+      quill-editor {
+        display: block;
+        margin-bottom: 16px;
+      }
     `,
   ],
 })
 export class DocumentDialogComponent {
   private fb = inject(FormBuilder);
   statuses = Object.values(DocumentStatus);
+  quillModules = QUILL_MODULES;
   form;
 
   constructor(
@@ -155,17 +184,34 @@ export class DocumentDialogComponent {
     MatDialogModule,
     MatSnackBarModule,
     MatExpansionModule,
+    MatMenuModule,
   ],
   template: `
     <div class="header">
       <h1>Controlled Documents</h1>
-      <button
-        mat-flat-button
-        color="primary"
-        *ngIf="canManage"
-        (click)="openNew()">
-        <mat-icon>add</mat-icon> New Document
-      </button>
+      <div class="header-actions">
+        <button mat-stroked-button [matMenuTriggerFor]="exportAll">
+          <mat-icon>download</mat-icon> Export all
+        </button>
+        <mat-menu #exportAll="matMenu">
+          <button mat-menu-item (click)="exportAllCsv()">
+            <mat-icon>table_chart</mat-icon> CSV
+          </button>
+          <button mat-menu-item (click)="exportAllDocx()">
+            <mat-icon>description</mat-icon> DOCX
+          </button>
+          <button mat-menu-item (click)="exportAllPdf()">
+            <mat-icon>picture_as_pdf</mat-icon> PDF
+          </button>
+        </mat-menu>
+        <button
+          mat-flat-button
+          color="primary"
+          *ngIf="canManage"
+          (click)="openNew()">
+          <mat-icon>add</mat-icon> New Document
+        </button>
+      </div>
     </div>
 
     <mat-card>
@@ -183,22 +229,37 @@ export class DocumentDialogComponent {
             </mat-panel-description>
           </mat-expansion-panel-header>
 
-          <div class="doc-actions" *ngIf="canManage">
-            <button mat-stroked-button (click)="openEdit(d)">
+          <div class="doc-actions">
+            <button
+              *ngIf="canManage"
+              mat-stroked-button
+              (click)="openEdit(d)">
               <mat-icon>edit</mat-icon> New Version
             </button>
+            <button mat-stroked-button [matMenuTriggerFor]="rowMenu">
+              <mat-icon>download</mat-icon> Export
+            </button>
+            <mat-menu #rowMenu="matMenu">
+              <button mat-menu-item (click)="exportOneDocx(d)">
+                <mat-icon>description</mat-icon> DOCX
+              </button>
+              <button mat-menu-item (click)="exportOnePdf(d)">
+                <mat-icon>picture_as_pdf</mat-icon> PDF
+              </button>
+            </mat-menu>
+            <button mat-stroked-button (click)="loadVersions(d)">
+              <mat-icon>history</mat-icon> Version History
+            </button>
             <button
+              *ngIf="canManage"
               mat-stroked-button
               color="warn"
               (click)="remove(d)">
               <mat-icon>delete</mat-icon> Delete
             </button>
-            <button mat-stroked-button (click)="loadVersions(d)">
-              <mat-icon>history</mat-icon> Version History
-            </button>
           </div>
 
-          <pre class="content">{{ d.content }}</pre>
+          <div class="content" [innerHTML]="d.content"></div>
 
           <div *ngIf="expanded()[d.id] as detail">
             <h4>Version History</h4>
@@ -222,33 +283,33 @@ export class DocumentDialogComponent {
         justify-content: space-between;
         margin-bottom: 16px;
       }
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
       h1 {
         margin: 0;
       }
       .empty {
         padding: 16px;
-        color: #64748b;
+        color: var(--notion-text-muted);
       }
       .doc-actions {
         display: flex;
         gap: 8px;
         margin: 8px 0 12px;
+        flex-wrap: wrap;
       }
       .content {
-        white-space: pre-wrap;
-        background: #f8fafc;
-        padding: 12px;
+        background: var(--notion-sidebar);
+        padding: 14px 16px;
         border-radius: 6px;
-        font-family: inherit;
+        border: 1px solid var(--notion-border);
         font-size: 14px;
+        line-height: 1.6;
       }
-      .chip {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 500;
-      }
+      .content :first-child { margin-top: 0; }
+      .content :last-child { margin-bottom: 0; }
     `,
   ],
 })
@@ -289,7 +350,7 @@ export class DocumentsComponent {
   openNew() {
     const ref = this.dialog.open(DocumentDialogComponent, {
       data: {},
-      width: '720px',
+      width: '760px',
     });
     ref.afterClosed().subscribe((payload) => {
       if (!payload) return;
@@ -309,7 +370,7 @@ export class DocumentsComponent {
   openEdit(doc: QmsDocument) {
     const ref = this.dialog.open(DocumentDialogComponent, {
       data: { doc },
-      width: '720px',
+      width: '760px',
     });
     ref.afterClosed().subscribe((payload) => {
       if (!payload) return;
@@ -328,5 +389,77 @@ export class DocumentsComponent {
       this.snack.open('Document deleted', 'OK', { duration: 2500 });
       this.refresh();
     });
+  }
+
+  // ---- Export ----
+  exportAllCsv() {
+    const rows = this.docs().map((d) => ({
+      code: d.code,
+      title: d.title,
+      version: d.version,
+      status: d.status,
+      updatedAt: d.updatedAt,
+    }));
+    exportCsv(rows, 'documents.csv', [
+      { key: 'code', label: 'Code' },
+      { key: 'title', label: 'Title' },
+      { key: 'version', label: 'Version' },
+      { key: 'status', label: 'Status' },
+      { key: 'updatedAt', label: 'Updated' },
+    ]);
+  }
+
+  exportAllDocx() {
+    void exportDocx(
+      'documents.docx',
+      this.docs().map((d) => ({
+        title: `${d.code} — ${d.title}`,
+        html: d.content,
+        meta: [
+          { label: 'Version', value: `v${d.version}` },
+          { label: 'Status', value: d.status },
+        ],
+      })),
+    );
+  }
+
+  exportAllPdf() {
+    exportPdf(
+      'documents.pdf',
+      this.docs().map((d) => ({
+        title: `${d.code} — ${d.title}`,
+        html: d.content,
+        meta: [
+          { label: 'Version', value: `v${d.version}` },
+          { label: 'Status', value: d.status },
+        ],
+      })),
+    );
+  }
+
+  exportOneDocx(d: QmsDocument) {
+    void exportDocx(`${d.code}-v${d.version}.docx`, [
+      {
+        title: `${d.code} — ${d.title}`,
+        html: d.content,
+        meta: [
+          { label: 'Version', value: `v${d.version}` },
+          { label: 'Status', value: d.status },
+        ],
+      },
+    ]);
+  }
+
+  exportOnePdf(d: QmsDocument) {
+    exportPdf(`${d.code}-v${d.version}.pdf`, [
+      {
+        title: `${d.code} — ${d.title}`,
+        html: d.content,
+        meta: [
+          { label: 'Version', value: `v${d.version}` },
+          { label: 'Status', value: d.status },
+        ],
+      },
+    ]);
   }
 }
