@@ -207,8 +207,9 @@ export class SubtaskDialogComponent {
         <mat-card class="card">
           <h3>5 Whys — Root cause analysis</h3>
           <p class="muted small">
-            Ask "why?" up to five times to reach the real root cause. All saved
-            automatically when you click Save.
+            Ask "why?" until you reach a cause you can actually fix — you don't
+            need all five. Root cause auto-fills from your last answered Why;
+            edit it to refine the wording for audit.
           </p>
           <form [formGroup]="whysForm" class="whys">
             <mat-form-field
@@ -227,6 +228,12 @@ export class SubtaskDialogComponent {
                 rows="2"
                 formControlName="rootCause"
                 [disabled]="!canEditWorkflow()"></textarea>
+              <mat-hint *ngIf="!rootCauseDirty()">
+                Auto-filling from your last answered Why
+              </mat-hint>
+              <mat-hint *ngIf="rootCauseDirty()">
+                Edited — <a href="javascript:void(0)" (click)="resetRootCauseToLastWhy()">↺ reset to last Why</a>
+              </mat-hint>
             </mat-form-field>
             <div class="right">
               <button
@@ -467,6 +474,7 @@ export class CapaDetailComponent implements OnInit {
   capa = signal<Capa | null>(null);
   subtasks = signal<CapaSubtask[]>([]);
   users = signal<UserRecord[]>([]);
+  rootCauseDirty = signal(false);
 
   whysForm: FormGroup = this.fb.group({
     w0: [''],
@@ -476,6 +484,8 @@ export class CapaDetailComponent implements OnInit {
     w4: [''],
     rootCause: [''],
   });
+
+  private suppressDirty = false;
 
   subCols = ['title', 'assignee', 'due', 'status', 'actions'];
 
@@ -490,20 +500,69 @@ export class CapaDetailComponent implements OnInit {
     if (this.auth.hasRole(Role.QUALITY_MANAGER, Role.ADMIN_OWNER)) {
       this.api.listUsers().subscribe((u) => this.users.set(u));
     }
+
+    // Auto-mirror the last non-empty Why into Root Cause until the user
+    // manually edits Root Cause. Manual edits flip rootCauseDirty = true and
+    // stop the mirror; the UI exposes a "reset to last Why" link to resume.
+    (['w0', 'w1', 'w2', 'w3', 'w4'] as const).forEach((key) => {
+      this.whysForm.get(key)!.valueChanges.subscribe(() => {
+        if (this.rootCauseDirty()) return;
+        this.syncRootCauseFromLastWhy();
+      });
+    });
+    this.whysForm.get('rootCause')!.valueChanges.subscribe(() => {
+      if (this.suppressDirty) return;
+      if (this.rootCauseDirty()) return;
+      if (this.whysForm.get('rootCause')!.value === this.lastNonEmptyWhy()) return;
+      this.rootCauseDirty.set(true);
+    });
+  }
+
+  private lastNonEmptyWhy(): string {
+    const v = this.whysForm.getRawValue();
+    const whys = [v.w0, v.w1, v.w2, v.w3, v.w4].map((x) => (x ?? '').toString());
+    for (let i = whys.length - 1; i >= 0; i--) {
+      if (whys[i].trim()) return whys[i];
+    }
+    return '';
+  }
+
+  private syncRootCauseFromLastWhy() {
+    const next = this.lastNonEmptyWhy();
+    const ctrl = this.whysForm.get('rootCause')!;
+    if (ctrl.value === next) return;
+    this.suppressDirty = true;
+    ctrl.setValue(next, { emitEvent: false });
+    this.suppressDirty = false;
+  }
+
+  resetRootCauseToLastWhy() {
+    this.rootCauseDirty.set(false);
+    this.syncRootCauseFromLastWhy();
   }
 
   private loadAll(id: string) {
     this.api.getCapa(id).subscribe((c) => {
       this.capa.set(c);
       const w = c.fiveWhys ?? [];
-      this.whysForm.patchValue({
-        w0: w[0] ?? '',
-        w1: w[1] ?? '',
-        w2: w[2] ?? '',
-        w3: w[3] ?? '',
-        w4: w[4] ?? '',
-        rootCause: c.rootCause ?? '',
-      });
+      this.suppressDirty = true;
+      this.whysForm.patchValue(
+        {
+          w0: w[0] ?? '',
+          w1: w[1] ?? '',
+          w2: w[2] ?? '',
+          w3: w[3] ?? '',
+          w4: w[4] ?? '',
+          rootCause: c.rootCause ?? '',
+        },
+        { emitEvent: false },
+      );
+      this.suppressDirty = false;
+      // If the saved root cause differs from the last non-empty Why, treat
+      // it as manually-authored so we don't clobber it on the next keystroke.
+      this.rootCauseDirty.set(
+        !!(c.rootCause ?? '') && c.rootCause !== this.lastNonEmptyWhy(),
+      );
       this.subtasks.set(c.subtasks ?? []);
     });
     this.api.listCapaSubtasks(id).subscribe((s) => this.subtasks.set(s));
@@ -533,11 +592,14 @@ export class CapaDetailComponent implements OnInit {
   canSubmitForValidationEnabled(): boolean {
     const c = this.capa();
     if (!c) return false;
+    const whysOk = (c.fiveWhys ?? []).some(
+      (w) => (w ?? '').toString().trim().length > 0,
+    );
     const rootCauseOk = !!(c.rootCause && c.rootCause.trim());
     const subs = this.subtasks();
     const allDone =
       subs.length > 0 && subs.every((s) => s.status === CapaSubtaskStatus.DONE);
-    return rootCauseOk && allDone;
+    return whysOk && rootCauseOk && allDone;
   }
 
   submitTooltip(): string {
@@ -545,6 +607,10 @@ export class CapaDetailComponent implements OnInit {
     if (!c) return '';
     const subs = this.subtasks();
     const reasons: string[] = [];
+    const whysOk = (c.fiveWhys ?? []).some(
+      (w) => (w ?? '').toString().trim().length > 0,
+    );
+    if (!whysOk) reasons.push('Fill at least one "Why?"');
     if (!c.rootCause || !c.rootCause.trim())
       reasons.push('Root cause is required');
     if (subs.length === 0) reasons.push('Add at least one subtask');
