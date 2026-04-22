@@ -12,11 +12,14 @@ import { QmsDocument } from './entities/document.entity';
 import { NonConformity } from './entities/non-conformity.entity';
 import { Organization } from './entities/organization.entity';
 import { Payment } from './entities/payment.entity';
+import { UserInvite } from './entities/user-invite.entity';
 import { User } from './entities/user.entity';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CapasModule } from './modules/capas/capas.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { InvitesModule } from './modules/invites/invites.module';
+import { MailerModule } from './modules/mailer/mailer.module';
 import { NonConformitiesModule } from './modules/non-conformities/non-conformities.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { SeedModule } from './modules/seed/seed.module';
@@ -38,6 +41,7 @@ import { UsersModule } from './modules/users/users.module';
         database: config.get<string>('DB_NAME') ?? 'qms',
         entities: [
           User,
+          UserInvite,
           Organization,
           Payment,
           QmsDocument,
@@ -49,9 +53,11 @@ import { UsersModule } from './modules/users/users.module';
         synchronize: true,
       }),
     }),
+    MailerModule,
     AuditModule,
     AuthModule,
     UsersModule,
+    InvitesModule,
     OrganizationsModule,
     NonConformitiesModule,
     CapasModule,
