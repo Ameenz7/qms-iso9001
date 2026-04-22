@@ -177,6 +177,21 @@ export interface QmsDocument {
   updatedAt: string;
 }
 
+export interface DocumentAttachment {
+  id: string;
+  documentId: string;
+  organizationId: string;
+  documentVersion: number;
+  filename: string;
+  mimeType: string;
+  size: string;
+  sha256: string;
+  storageKey: string;
+  uploadedById: string | null;
+  uploadedBy?: AuthUser | null;
+  createdAt: string;
+}
+
 export interface AuditLog {
   id: string;
   userId: string | null;

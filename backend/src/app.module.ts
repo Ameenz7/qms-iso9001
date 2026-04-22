@@ -7,6 +7,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { AuditLog } from './entities/audit-log.entity';
 import { Capa } from './entities/capa.entity';
+import { DocumentAttachment } from './entities/document-attachment.entity';
 import { DocumentVersion } from './entities/document-version.entity';
 import { QmsDocument } from './entities/document.entity';
 import { NonConformity } from './entities/non-conformity.entity';
@@ -23,6 +24,7 @@ import { MailerModule } from './modules/mailer/mailer.module';
 import { NonConformitiesModule } from './modules/non-conformities/non-conformities.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { SeedModule } from './modules/seed/seed.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -46,6 +48,7 @@ import { UsersModule } from './modules/users/users.module';
           Payment,
           QmsDocument,
           DocumentVersion,
+          DocumentAttachment,
           NonConformity,
           Capa,
           AuditLog,
@@ -54,6 +57,7 @@ import { UsersModule } from './modules/users/users.module';
       }),
     }),
     MailerModule,
+    StorageModule,
     AuditModule,
     AuthModule,
     UsersModule,
