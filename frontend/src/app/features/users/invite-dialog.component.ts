@@ -15,7 +15,16 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { ROLE_LABELS, Role } from '../../core/models';
+import { Organization, ROLE_LABELS, Role } from '../../core/models';
+
+export interface InviteDialogData {
+  actorRole: Role;
+  organizations?: Organization[];
+  presetRole?: Role;
+  presetOrganizationId?: string;
+  title?: string;
+  subtitle?: string;
+}
 
 @Component({
   selector: 'app-invite-dialog',
@@ -31,22 +40,32 @@ import { ROLE_LABELS, Role } from '../../core/models';
     MatIconModule,
   ],
   template: `
-    <h2 mat-dialog-title>Invite User</h2>
+    <h2 mat-dialog-title>{{ data.title || 'Invite User' }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form" class="form">
         <p class="hint">
-          They'll receive an email with a secure link to set their own name
-          and password. The link expires in 7 days and can only be used once.
+          {{ data.subtitle
+            || "They'll receive an email with a secure link to set their own name and password. The link expires in 7 days and can only be used once." }}
         </p>
         <mat-form-field appearance="outline">
           <mat-label>Email</mat-label>
           <input matInput formControlName="email" type="email" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" *ngIf="!data.presetRole">
           <mat-label>Role</mat-label>
           <mat-select formControlName="role">
             <mat-option *ngFor="let r of availableRoles" [value]="r">
               {{ roleLabel(r) }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field
+          appearance="outline"
+          *ngIf="showOrgPicker && !data.presetOrganizationId">
+          <mat-label>Organization</mat-label>
+          <mat-select formControlName="organizationId">
+            <mat-option *ngFor="let o of data.organizations || []" [value]="o.id">
+              {{ o.name }}
             </mat-option>
           </mat-select>
         </mat-form-field>
@@ -83,22 +102,37 @@ export class InviteDialogComponent {
   availableRoles: Role[];
   form;
 
+  get showOrgPicker(): boolean {
+    return (
+      this.data.actorRole === Role.SUPER_ADMIN &&
+      (this.data.organizations?.length ?? 0) > 0
+    );
+  }
+
   constructor(
     public dialogRef: MatDialogRef<InviteDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { actorRole: Role },
+    @Inject(MAT_DIALOG_DATA) public data: InviteDialogData,
   ) {
     this.availableRoles =
       data.actorRole === Role.SUPER_ADMIN
-        ? [
-            Role.ADMIN_OWNER,
-            Role.QUALITY_MANAGER,
-            Role.EMPLOYEE,
-          ]
+        ? [Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE]
         : [Role.QUALITY_MANAGER, Role.EMPLOYEE];
+
+    const defaultRole =
+      data.presetRole ??
+      (data.actorRole === Role.SUPER_ADMIN
+        ? Role.ADMIN_OWNER
+        : Role.EMPLOYEE);
+
     this.form = this.fb.nonNullable.group({
       email: ['', [Validators.required, Validators.email]],
-      role: [Role.EMPLOYEE, [Validators.required]],
+      role: [defaultRole, [Validators.required]],
+      organizationId: [data.presetOrganizationId ?? ''],
     });
+
+    if (this.showOrgPicker && !data.presetOrganizationId) {
+      this.form.controls.organizationId.addValidators([Validators.required]);
+    }
   }
 
   roleLabel(r: Role): string {
@@ -106,7 +140,13 @@ export class InviteDialogComponent {
   }
 
   save() {
-    this.dialogRef.close(this.form.getRawValue());
+    const v = this.form.getRawValue();
+    const payload: Record<string, string> = {
+      email: v.email,
+      role: v.role,
+    };
+    if (v.organizationId) payload['organizationId'] = v.organizationId;
+    this.dialogRef.close(payload);
   }
 }
 

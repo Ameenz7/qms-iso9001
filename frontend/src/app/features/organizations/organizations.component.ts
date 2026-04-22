@@ -22,7 +22,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiService } from '../../core/api.service';
-import { Organization, OrganizationStatus, Payment } from '../../core/models';
+import { Organization, OrganizationStatus, Payment, Role } from '../../core/models';
+import {
+  InviteDialogComponent,
+  InviteLinkDialogComponent,
+} from '../users/invite-dialog.component';
 
 @NgComponent({
   selector: 'app-org-dialog',
@@ -398,6 +402,10 @@ export class PaymentDialogComponent {
                 <mat-icon>edit</mat-icon>
                 <span>Edit</span>
               </button>
+              <button mat-menu-item (click)="inviteOwner(o)">
+                <mat-icon>mail</mat-icon>
+                <span>Invite admin owner</span>
+              </button>
               <button
                 mat-menu-item
                 *ngIf="o.status !== 'suspended'"
@@ -586,6 +594,42 @@ export class OrganizationsComponent {
     this.api.unsuspendOrganization(org.id).subscribe(() => {
       this.snack.open('Organization unsuspended', 'OK', { duration: 2500 });
       this.refresh();
+    });
+  }
+
+  inviteOwner(org: Organization) {
+    const ref = this.dialog.open(InviteDialogComponent, {
+      data: {
+        actorRole: Role.SUPER_ADMIN,
+        presetRole: Role.ADMIN_OWNER,
+        presetOrganizationId: org.id,
+        title: `Invite admin owner — ${org.name}`,
+        subtitle:
+          "They'll receive an email with a secure link to set their name and password. The link expires in 7 days and can only be used once.",
+      },
+      width: '520px',
+    });
+    ref.afterClosed().subscribe((payload) => {
+      if (!payload) return;
+      this.api.createInvite(payload).subscribe({
+        next: (res) => {
+          this.snack.open('Invitation sent', 'OK', { duration: 2500 });
+          this.dialog.open(InviteLinkDialogComponent, {
+            data: {
+              email: res.invite.email,
+              url: res.acceptUrl,
+              expiresAt: res.invite.expiresAt,
+            },
+            width: '560px',
+          });
+        },
+        error: (e) =>
+          this.snack.open(
+            e?.error?.message?.[0] || e?.error?.message || 'Error',
+            'Close',
+            { duration: 4000 },
+          ),
+      });
     });
   }
 
