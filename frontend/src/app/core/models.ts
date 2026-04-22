@@ -192,6 +192,50 @@ export interface DocumentAttachment {
   createdAt: string;
 }
 
+export interface DocumentShare {
+  id: string;
+  documentId: string;
+  organizationId: string;
+  expiresAt: string;
+  revokedAt: string | null;
+  label: string | null;
+  createdById: string | null;
+  createdAt: string;
+}
+
+export interface CreateShareResponse {
+  share: DocumentShare;
+  shareUrl: string;
+}
+
+export interface PublicShareView {
+  share: {
+    id: string;
+    label: string | null;
+    expiresAt: string;
+    createdAt: string;
+  };
+  organization: { name: string };
+  document: {
+    id: string;
+    code: string;
+    title: string;
+    content: string;
+    version: number;
+    status: string;
+    updatedAt: string;
+  };
+  attachments: Array<{
+    id: string;
+    filename: string;
+    mimeType: string;
+    size: string;
+    sha256: string;
+    documentVersion: number;
+    createdAt: string;
+  }>;
+}
+
 export interface AuditLog {
   id: string;
   userId: string | null;

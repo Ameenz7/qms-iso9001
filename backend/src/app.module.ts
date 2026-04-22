@@ -8,6 +8,7 @@ import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { AuditLog } from './entities/audit-log.entity';
 import { Capa } from './entities/capa.entity';
 import { DocumentAttachment } from './entities/document-attachment.entity';
+import { DocumentShare } from './entities/document-share.entity';
 import { DocumentVersion } from './entities/document-version.entity';
 import { QmsDocument } from './entities/document.entity';
 import { NonConformity } from './entities/non-conformity.entity';
@@ -49,6 +50,7 @@ import { UsersModule } from './modules/users/users.module';
           QmsDocument,
           DocumentVersion,
           DocumentAttachment,
+          DocumentShare,
           NonConformity,
           Capa,
           AuditLog,

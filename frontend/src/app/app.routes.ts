@@ -16,6 +16,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'shared/:token',
+    loadComponent: () =>
+      import('./features/shared-document/shared-document.component').then(
+        (m) => m.SharedDocumentComponent,
+      ),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>

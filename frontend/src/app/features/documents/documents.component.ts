@@ -31,7 +31,9 @@ import {
   exportPdf,
 } from '../../core/export.util';
 import {
+  CreateShareResponse,
   DocumentAttachment,
+  DocumentShare,
   DocumentStatus,
   QmsDocument,
   Role,
@@ -175,6 +177,232 @@ export class DocumentDialogComponent {
 }
 
 @Component({
+  selector: 'app-share-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTableModule,
+    MatSnackBarModule,
+    MatTooltipModule,
+  ],
+  template: `
+    <h2 mat-dialog-title>Share "{{ data.doc.code }}"</h2>
+    <mat-dialog-content>
+      <p class="muted">
+        Anyone with this link can view the document + download attachments
+        (read-only). No login required. Link expires automatically.
+      </p>
+      <form [formGroup]="form" class="form">
+        <mat-form-field appearance="outline">
+          <mat-label>Expires in (days)</mat-label>
+          <mat-select formControlName="expiresInDays">
+            <mat-option [value]="1">1 day</mat-option>
+            <mat-option [value]="7">7 days</mat-option>
+            <mat-option [value]="30">30 days</mat-option>
+            <mat-option [value]="90">90 days</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Label (optional — e.g. "External auditor")</mat-label>
+          <input matInput formControlName="label" maxlength="200" />
+        </mat-form-field>
+        <button mat-flat-button color="primary" (click)="createLink()">
+          <mat-icon>link</mat-icon> Create share link
+        </button>
+      </form>
+
+      <div *ngIf="lastCreated() as created" class="created">
+        <strong>New link (copy it now — token is never shown again):</strong>
+        <div class="link-row">
+          <input readonly [value]="created.shareUrl" #urlInput />
+          <button
+            mat-icon-button
+            (click)="copy(created.shareUrl, urlInput)"
+            matTooltip="Copy">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <h4>Existing share links</h4>
+      <table *ngIf="shares().length; else noShares" class="shares-table">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Expires</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of shares()">
+            <td>{{ s.label || '—' }}</td>
+            <td>{{ s.expiresAt | date: 'short' }}</td>
+            <td>
+              <span *ngIf="s.revokedAt" class="chip chip-danger">revoked</span>
+              <span
+                *ngIf="!s.revokedAt && isExpired(s)"
+                class="chip chip-warn"
+                >expired</span
+              >
+              <span
+                *ngIf="!s.revokedAt && !isExpired(s)"
+                class="chip chip-ok"
+                >active</span
+              >
+            </td>
+            <td class="row-actions">
+              <button
+                *ngIf="!s.revokedAt && !isExpired(s)"
+                mat-icon-button
+                color="warn"
+                (click)="revoke(s)"
+                matTooltip="Revoke">
+                <mat-icon>link_off</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noShares>
+        <p class="muted">No share links yet.</p>
+      </ng-template>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Close</button>
+    </mat-dialog-actions>
+  `,
+  styles: [
+    `
+      .form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 520px;
+      }
+      .muted {
+        color: var(--notion-text-muted);
+        font-size: 13px;
+      }
+      .created {
+        border: 1px solid var(--notion-border);
+        background: var(--notion-sidebar);
+        padding: 10px 12px;
+        border-radius: 6px;
+        margin: 8px 0 16px;
+        font-size: 13px;
+      }
+      .link-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-top: 4px;
+      }
+      .link-row input {
+        flex: 1;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        padding: 6px 8px;
+        border: 1px solid var(--notion-border);
+        border-radius: 4px;
+        background: #fff;
+      }
+      .shares-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        margin-top: 4px;
+      }
+      .shares-table th,
+      .shares-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--notion-border);
+        text-align: left;
+      }
+      .row-actions {
+        width: 1%;
+        white-space: nowrap;
+      }
+    `,
+  ],
+})
+export class ShareDialogComponent {
+  private fb = inject(FormBuilder);
+  private api = inject(ApiService);
+  private snack = inject(MatSnackBar);
+
+  shares = signal<DocumentShare[]>([]);
+  lastCreated = signal<CreateShareResponse | null>(null);
+
+  form = this.fb.nonNullable.group({
+    expiresInDays: [7],
+    label: [''],
+  });
+
+  constructor(
+    public dialogRef: MatDialogRef<ShareDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: { doc: QmsDocument },
+  ) {
+    this.refresh();
+  }
+
+  refresh() {
+    this.api.listShares(this.data.doc.id).subscribe((list) => {
+      this.shares.set(list);
+    });
+  }
+
+  isExpired(s: DocumentShare): boolean {
+    return new Date(s.expiresAt).getTime() < Date.now();
+  }
+
+  createLink() {
+    const v = this.form.getRawValue();
+    this.api
+      .createShare(this.data.doc.id, {
+        expiresInDays: v.expiresInDays,
+        label: v.label || undefined,
+      })
+      .subscribe({
+        next: (res) => {
+          this.lastCreated.set(res);
+          this.refresh();
+        },
+        error: (e) =>
+          this.snack.open(e?.error?.message || 'Failed', 'Close', {
+            duration: 4000,
+          }),
+      });
+  }
+
+  copy(url: string, input: HTMLInputElement) {
+    input.select();
+    void navigator.clipboard.writeText(url).then(() => {
+      this.snack.open('Link copied', 'OK', { duration: 1800 });
+    });
+  }
+
+  revoke(s: DocumentShare) {
+    if (!confirm('Revoke this share link? Anyone using it will lose access.')) {
+      return;
+    }
+    this.api.revokeShare(s.id).subscribe({
+      next: () => {
+        this.snack.open('Link revoked', 'OK', { duration: 2000 });
+        this.refresh();
+      },
+    });
+  }
+}
+
+@Component({
   selector: 'app-documents',
   standalone: true,
   imports: [
@@ -269,17 +497,22 @@ export class DocumentDialogComponent {
           <div class="attachments">
             <div class="attachments-header">
               <h4>Attachments</h4>
-              <button
-                *ngIf="canManage"
-                mat-stroked-button
-                (click)="fileInput.click()">
-                <mat-icon>attach_file</mat-icon> Attach file
-              </button>
-              <input
-                type="file"
-                #fileInput
-                hidden
-                (change)="onFilePicked(d, $event)" />
+              <div class="att-actions">
+                <button
+                  *ngIf="canShare"
+                  mat-stroked-button
+                  (click)="openShareDialog(d)">
+                  <mat-icon>share</mat-icon> Share link
+                </button>
+                <button mat-stroked-button (click)="fileInput.click()">
+                  <mat-icon>attach_file</mat-icon> Attach file
+                </button>
+                <input
+                  type="file"
+                  #fileInput
+                  hidden
+                  (change)="onFilePicked(d, $event)" />
+              </div>
             </div>
             <table
               *ngIf="attachments()[d.id]?.length; else noAtt"
@@ -311,11 +544,11 @@ export class DocumentDialogComponent {
                       <mat-icon>download</mat-icon>
                     </button>
                     <button
-                      *ngIf="canManage"
+                      *ngIf="canDeleteAttachment"
                       mat-icon-button
                       color="warn"
                       (click)="removeAttachment(d, a)"
-                      matTooltip="Delete">
+                      matTooltip="Delete (admin owner only)">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </td>
@@ -388,6 +621,10 @@ export class DocumentDialogComponent {
       .attachments-header h4 {
         margin: 0;
       }
+      .att-actions {
+        display: flex;
+        gap: 8px;
+      }
       .att-table {
         width: 100%;
         border-collapse: collapse;
@@ -431,6 +668,14 @@ export class DocumentsComponent {
 
   get canManage(): boolean {
     return this.auth.hasRole(Role.QUALITY_MANAGER, Role.ADMIN_OWNER);
+  }
+
+  get canShare(): boolean {
+    return this.auth.hasRole(Role.QUALITY_MANAGER, Role.ADMIN_OWNER);
+  }
+
+  get canDeleteAttachment(): boolean {
+    return this.auth.hasRole(Role.ADMIN_OWNER);
   }
 
   constructor() {
@@ -551,6 +796,13 @@ export class DocumentsComponent {
     if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
     if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
     return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  }
+
+  openShareDialog(doc: QmsDocument) {
+    this.dialog.open(ShareDialogComponent, {
+      data: { doc },
+      width: '640px',
+    });
   }
 
   remove(doc: QmsDocument) {
