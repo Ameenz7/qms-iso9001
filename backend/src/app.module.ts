@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_PIPE } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ValidationPipe } from '@nestjs/common';
+import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { AuditLog } from './entities/audit-log.entity';
 import { Capa } from './entities/capa.entity';
 import { DocumentVersion } from './entities/document-version.entity';
@@ -64,4 +65,8 @@ import { UsersModule } from './modules/users/users.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CsrfMiddleware).forRoutes('*');
+  }
+}

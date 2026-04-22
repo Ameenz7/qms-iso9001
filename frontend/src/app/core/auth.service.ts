@@ -1,30 +1,37 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, catchError, firstValueFrom, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthUser, LoginResponse, Role } from './models';
-
-const TOKEN_KEY = 'qms.token';
-const USER_KEY = 'qms.user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  readonly user = signal<AuthUser | null>(this.loadUser());
-  readonly token = signal<string | null>(localStorage.getItem(TOKEN_KEY));
-  readonly isAuthenticated = computed(() => !!this.token() && !!this.user());
+  readonly user = signal<AuthUser | null>(null);
+  readonly ready = signal<boolean>(false);
+  readonly isAuthenticated = computed(() => !!this.user());
 
-  private loadUser(): AuthUser | null {
-    const raw = localStorage.getItem(USER_KEY);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as AuthUser;
-    } catch {
-      return null;
-    }
+  /**
+   * Bootstraps the auth state on app start. Hits `/auth/me` — if the httpOnly
+   * cookie is valid the backend returns the user; otherwise a 401 leaves us
+   * anonymous. Also primes the XSRF-TOKEN cookie.
+   */
+  async bootstrap(): Promise<void> {
+    await firstValueFrom(
+      this.http.get(`${environment.apiUrl}/auth/csrf-token`).pipe(
+        catchError(() => of(null)),
+      ),
+    );
+    const me = await firstValueFrom(
+      this.http
+        .get<AuthUser>(`${environment.apiUrl}/auth/me`)
+        .pipe(catchError(() => of(null as AuthUser | null))),
+    );
+    this.user.set(me);
+    this.ready.set(true);
   }
 
   login(email: string, password: string): Observable<LoginResponse> {
@@ -35,18 +42,18 @@ export class AuthService {
       })
       .pipe(
         tap((res) => {
-          localStorage.setItem(TOKEN_KEY, res.accessToken);
-          localStorage.setItem(USER_KEY, JSON.stringify(res.user));
-          this.token.set(res.accessToken);
           this.user.set(res.user);
         }),
       );
   }
 
   logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    this.token.set(null);
+    this.http
+      .post(`${environment.apiUrl}/auth/logout`, {})
+      .subscribe({ complete: () => this.afterLogout() });
+  }
+
+  private afterLogout(): void {
     this.user.set(null);
     void this.router.navigate(['/login']);
   }
