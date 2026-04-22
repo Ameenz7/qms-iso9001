@@ -344,6 +344,14 @@ export class CapasService {
         `Cannot submit for validation from status '${capa.status}'`,
       );
     }
+    const filledWhys = (capa.fiveWhys ?? []).filter(
+      (w) => (w ?? '').toString().trim().length > 0,
+    );
+    if (filledWhys.length < 1) {
+      throw new BadRequestException(
+        'At least one "Why?" must be filled before submitting for validation',
+      );
+    }
     if (!capa.rootCause || !capa.rootCause.trim()) {
       throw new BadRequestException(
         'Root cause is required before submitting for validation',
