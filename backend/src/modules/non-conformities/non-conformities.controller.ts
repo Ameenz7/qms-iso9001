@@ -71,10 +71,7 @@ export class NonConformitiesController {
 
   @Delete(':id')
   @Roles(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE)
-  remove(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.service.remove(user, id);
   }
 }

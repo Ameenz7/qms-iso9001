@@ -53,10 +53,7 @@ export class NonConformitiesService {
     if (nc.organizationId !== actor.organizationId) {
       throw new ForbiddenException();
     }
-    if (
-      actor.role === Role.EMPLOYEE &&
-      nc.submittedById !== actor.userId
-    ) {
+    if (actor.role === Role.EMPLOYEE && nc.submittedById !== actor.userId) {
       throw new ForbiddenException();
     }
     return nc;

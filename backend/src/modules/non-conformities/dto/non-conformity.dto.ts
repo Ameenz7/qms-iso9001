@@ -1,9 +1,4 @@
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsUUID,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 import { NCSeverity, NCStatus } from '../../../common/enums/status.enum';
 
 export class CreateNonConformityDto {

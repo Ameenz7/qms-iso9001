@@ -18,6 +18,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import {
   CreateOrganizationDto,
+  RecordPaymentDto,
+  SuspendOrganizationDto,
   UpdateOrganizationDto,
 } from './dto/organization.dto';
 import { OrganizationsService } from './organizations.service';
@@ -56,10 +58,35 @@ export class OrganizationsController {
   }
 
   @Delete(':id')
-  remove(
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.service.remove(user, id);
+  }
+
+  @Post(':id/suspend')
+  suspend(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
+    @Body() dto: SuspendOrganizationDto,
   ) {
-    return this.service.remove(user, id);
+    return this.service.suspend(user, id, dto);
+  }
+
+  @Post(':id/unsuspend')
+  unsuspend(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.service.unsuspend(user, id);
+  }
+
+  @Post(':id/payments')
+  recordPayment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: RecordPaymentDto,
+  ) {
+    return this.service.recordPayment(user, id, dto);
+  }
+
+  @Get(':id/payments')
+  listPayments(@Param('id') id: string) {
+    return this.service.listPayments(id);
   }
 }

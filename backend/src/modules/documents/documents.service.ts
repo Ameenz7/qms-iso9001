@@ -10,10 +10,7 @@ import { AuthenticatedUser } from '../../common/decorators/current-user.decorato
 import { QmsDocument } from '../../entities/document.entity';
 import { DocumentVersion } from '../../entities/document-version.entity';
 import { AuditService } from '../audit/audit.service';
-import {
-  CreateDocumentDto,
-  UpdateDocumentDto,
-} from './dto/document.dto';
+import { CreateDocumentDto, UpdateDocumentDto } from './dto/document.dto';
 
 @Injectable()
 export class DocumentsService {
@@ -87,7 +84,8 @@ export class DocumentsService {
 
   async update(actor: AuthenticatedUser, id: string, dto: UpdateDocumentDto) {
     const doc = await this.findOne(actor, id);
-    const contentChanged = dto.content !== undefined && dto.content !== doc.content;
+    const contentChanged =
+      dto.content !== undefined && dto.content !== doc.content;
 
     return this.dataSource.transaction(async (trx) => {
       if (dto.title !== undefined) doc.title = dto.title;

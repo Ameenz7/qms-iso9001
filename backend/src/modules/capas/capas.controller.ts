@@ -38,10 +38,7 @@ export class CapasController {
 
   @Post()
   @Roles(Role.QUALITY_MANAGER, Role.ADMIN_OWNER)
-  create(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateCapaDto,
-  ) {
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateCapaDto) {
     return this.service.create(user, dto);
   }
 
@@ -57,10 +54,7 @@ export class CapasController {
 
   @Delete(':id')
   @Roles(Role.QUALITY_MANAGER, Role.ADMIN_OWNER)
-  remove(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.service.remove(user, id);
   }
 }

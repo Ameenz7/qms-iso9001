@@ -19,6 +19,9 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'dashboard',
+        canActivate: [
+          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
+        ],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent,
@@ -34,9 +37,7 @@ export const routes: Routes = [
       },
       {
         path: 'users',
-        canActivate: [
-          roleGuard(Role.SUPER_ADMIN, Role.ADMIN_OWNER, Role.QUALITY_MANAGER),
-        ],
+        canActivate: [roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)],
         loadComponent: () =>
           import('./features/users/users.component').then(
             (m) => m.UsersComponent,
@@ -74,9 +75,7 @@ export const routes: Routes = [
       },
       {
         path: 'audit-logs',
-        canActivate: [
-          roleGuard(Role.SUPER_ADMIN, Role.ADMIN_OWNER, Role.QUALITY_MANAGER),
-        ],
+        canActivate: [roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)],
         loadComponent: () =>
           import('./features/audit/audit.component').then(
             (m) => m.AuditComponent,

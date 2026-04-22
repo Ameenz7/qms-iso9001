@@ -7,6 +7,7 @@ import {
   Capa,
   NonConformity,
   Organization,
+  Payment,
   QmsDocument,
   UserRecord,
 } from './models';
@@ -31,6 +32,35 @@ export class ApiService {
   }
   deleteOrganization(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/organizations/${id}`);
+  }
+  suspendOrganization(
+    id: string,
+    reason?: string,
+  ): Observable<Organization> {
+    return this.http.post<Organization>(
+      `${this.base}/organizations/${id}/suspend`,
+      { reason },
+    );
+  }
+  unsuspendOrganization(id: string): Observable<Organization> {
+    return this.http.post<Organization>(
+      `${this.base}/organizations/${id}/unsuspend`,
+      {},
+    );
+  }
+  recordPayment(
+    id: string,
+    body: { amount: string; monthsCovered: number; note?: string },
+  ): Observable<Payment> {
+    return this.http.post<Payment>(
+      `${this.base}/organizations/${id}/payments`,
+      body,
+    );
+  }
+  listPayments(id: string): Observable<Payment[]> {
+    return this.http.get<Payment[]>(
+      `${this.base}/organizations/${id}/payments`,
+    );
   }
 
   // Users

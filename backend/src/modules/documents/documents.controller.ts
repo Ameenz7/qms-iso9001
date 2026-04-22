@@ -17,10 +17,7 @@ import { Role } from '../../common/enums/role.enum';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { DocumentsService } from './documents.service';
-import {
-  CreateDocumentDto,
-  UpdateDocumentDto,
-} from './dto/document.dto';
+import { CreateDocumentDto, UpdateDocumentDto } from './dto/document.dto';
 
 @Controller('documents')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -60,10 +57,7 @@ export class DocumentsController {
 
   @Delete(':id')
   @Roles(Role.QUALITY_MANAGER, Role.ADMIN_OWNER)
-  remove(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ) {
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.service.remove(user, id);
   }
 }
