@@ -122,6 +122,9 @@ export class UsersService {
   }
 
   async remove(actor: AuthenticatedUser, id: string) {
+    if (actor.userId === id) {
+      throw new ForbiddenException('You cannot delete your own account');
+    }
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException();
     if (
@@ -129,6 +132,14 @@ export class UsersService {
       user.organizationId !== actor.organizationId
     ) {
       throw new ForbiddenException();
+    }
+    if (
+      actor.role === Role.ADMIN_OWNER &&
+      (user.role === Role.ADMIN_OWNER || user.role === Role.SUPER_ADMIN)
+    ) {
+      throw new ForbiddenException(
+        'Admin owners cannot delete other admin owners or super admins',
+      );
     }
     await this.userRepo.remove(user);
     await this.audit.log(actor, 'delete', 'User', id);
