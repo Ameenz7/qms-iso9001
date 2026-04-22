@@ -135,7 +135,10 @@ export class UserDialogComponent {
       firstName: [data.user?.firstName ?? '', [Validators.required]],
       lastName: [data.user?.lastName ?? '', [Validators.required]],
       role: [data.user?.role ?? Role.EMPLOYEE, [Validators.required]],
-      password: ['', editing ? [] : [Validators.minLength(6), Validators.required]],
+      password: [
+        '',
+        editing ? [Validators.minLength(6)] : [Validators.minLength(6), Validators.required],
+      ],
       isActive: [data.user?.isActive ?? true],
     });
   }
@@ -218,7 +221,7 @@ export class UserDialogComponent {
               <mat-icon>edit</mat-icon>
             </button>
             <button
-              *ngIf="canManage"
+              *ngIf="canManage && u.id !== currentUserId"
               mat-icon-button
               color="warn"
               (click)="remove(u)">
@@ -266,6 +269,10 @@ export class UsersComponent {
     return this.auth.hasRole(Role.SUPER_ADMIN, Role.ADMIN_OWNER);
   }
 
+  get currentUserId(): string | undefined {
+    return this.auth.user()?.id;
+  }
+
   roleLabel(role: Role): string {
     return ROLE_LABELS[role];
   }
@@ -310,15 +317,29 @@ export class UsersComponent {
           this.snack.open('User updated', 'OK', { duration: 2500 });
           this.refresh();
         },
+        error: (e) =>
+          this.snack.open(
+            e?.error?.message?.[0] || e?.error?.message || 'Error',
+            'Close',
+            { duration: 4000 },
+          ),
       });
     });
   }
 
   remove(user: UserRecord) {
     if (!confirm(`Delete user "${user.email}"?`)) return;
-    this.api.deleteUser(user.id).subscribe(() => {
-      this.snack.open('User deleted', 'OK', { duration: 2500 });
-      this.refresh();
+    this.api.deleteUser(user.id).subscribe({
+      next: () => {
+        this.snack.open('User deleted', 'OK', { duration: 2500 });
+        this.refresh();
+      },
+      error: (e) =>
+        this.snack.open(
+          e?.error?.message?.[0] || e?.error?.message || 'Error',
+          'Close',
+          { duration: 4000 },
+        ),
     });
   }
 }
