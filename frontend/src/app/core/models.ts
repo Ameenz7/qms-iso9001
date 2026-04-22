@@ -98,6 +98,7 @@ export enum NCSeverity {
 export enum NCStatus {
   SUBMITTED = 'submitted',
   UNDER_REVIEW = 'under_review',
+  UNDER_INVESTIGATION = 'under_investigation',
   LINKED = 'linked',
   CLOSED = 'closed',
 }
@@ -105,9 +106,15 @@ export enum NCStatus {
 export enum CAPAStatus {
   OPEN = 'open',
   IN_PROGRESS = 'in_progress',
-  IMPLEMENTED = 'implemented',
-  VERIFIED = 'verified',
+  PENDING_VALIDATION = 'pending_validation',
   CLOSED = 'closed',
+  REOPENED = 'reopened',
+}
+
+export enum CapaSubtaskStatus {
+  TODO = 'todo',
+  IN_PROGRESS = 'in_progress',
+  DONE = 'done',
 }
 
 export enum DocumentStatus {
@@ -147,9 +154,35 @@ export interface Capa {
   assignedToId: string | null;
   createdBy?: AuthUser;
   assignedTo?: AuthUser | null;
+  validatedBy?: AuthUser | null;
+  validatedById: string | null;
+  validatedAt: string | null;
+  submittedForValidationAt: string | null;
+  closedAt: string | null;
+  fiveWhys: string[];
   nonConformities?: NonConformity[];
+  subtasks?: CapaSubtask[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CapaSubtask {
+  id: string;
+  capaId: string;
+  organizationId: string;
+  title: string;
+  description: string | null;
+  status: CapaSubtaskStatus;
+  assigneeId: string | null;
+  assignee?: AuthUser | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  completedById: string | null;
+  completedBy?: AuthUser | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  capa?: Pick<Capa, 'id' | 'code' | 'title' | 'status'>;
 }
 
 export interface DocumentVersion {

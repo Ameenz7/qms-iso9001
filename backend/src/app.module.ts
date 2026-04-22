@@ -7,6 +7,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { AuditLog } from './entities/audit-log.entity';
 import { Capa } from './entities/capa.entity';
+import { CapaSubtask } from './entities/capa-subtask.entity';
 import { DocumentAttachment } from './entities/document-attachment.entity';
 import { DocumentShare } from './entities/document-share.entity';
 import { DocumentVersion } from './entities/document-version.entity';
@@ -53,6 +54,7 @@ import { UsersModule } from './modules/users/users.module';
           DocumentShare,
           NonConformity,
           Capa,
+          CapaSubtask,
           AuditLog,
         ],
         synchronize: true,

@@ -78,6 +78,16 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'capas/:id',
+        canActivate: [
+          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
+        ],
+        loadComponent: () =>
+          import('./features/capas/capa-detail.component').then(
+            (m) => m.CapaDetailComponent,
+          ),
+      },
+      {
         path: 'documents',
         canActivate: [
           roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),

@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import {
   AuditLog,
   Capa,
+  CapaSubtask,
   CreateInviteResponse,
   CreateShareResponse,
   DocumentAttachment,
@@ -159,6 +160,73 @@ export class ApiService {
   }
   deleteCapa(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/capas/${id}`);
+  }
+  promoteNcToCapa(
+    ncId: string,
+    body: { title?: string; code?: string } = {},
+  ): Observable<Capa> {
+    return this.http.post<Capa>(`${this.base}/capas/from-nc/${ncId}`, body);
+  }
+  updateCapaFiveWhys(
+    id: string,
+    body: { fiveWhys: string[]; rootCause?: string },
+  ): Observable<Capa> {
+    return this.http.patch<Capa>(`${this.base}/capas/${id}/five-whys`, body);
+  }
+  listCapaSubtasks(capaId: string): Observable<CapaSubtask[]> {
+    return this.http.get<CapaSubtask[]>(
+      `${this.base}/capas/${capaId}/subtasks`,
+    );
+  }
+  createCapaSubtask(
+    capaId: string,
+    body: {
+      title: string;
+      description?: string;
+      assigneeId?: string;
+      dueDate?: string;
+    },
+  ): Observable<CapaSubtask> {
+    return this.http.post<CapaSubtask>(
+      `${this.base}/capas/${capaId}/subtasks`,
+      body,
+    );
+  }
+  updateCapaSubtask(
+    subtaskId: string,
+    body: Partial<{
+      title: string;
+      description: string;
+      status: string;
+      assigneeId: string | null;
+      dueDate: string | null;
+    }>,
+  ): Observable<CapaSubtask> {
+    return this.http.patch<CapaSubtask>(
+      `${this.base}/capas/subtasks/${subtaskId}`,
+      body,
+    );
+  }
+  deleteCapaSubtask(subtaskId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/capas/subtasks/${subtaskId}`);
+  }
+  mySubtasks(): Observable<CapaSubtask[]> {
+    return this.http.get<CapaSubtask[]>(`${this.base}/capas/my-subtasks`);
+  }
+  submitCapaForValidation(id: string): Observable<Capa> {
+    return this.http.post<Capa>(
+      `${this.base}/capas/${id}/submit-for-validation`,
+      {},
+    );
+  }
+  validateCapa(id: string): Observable<Capa> {
+    return this.http.post<Capa>(`${this.base}/capas/${id}/validate`, {});
+  }
+  rejectCapaValidation(id: string, reason?: string): Observable<Capa> {
+    return this.http.post<Capa>(`${this.base}/capas/${id}/reject`, { reason });
+  }
+  reopenCapa(id: string, reason?: string): Observable<Capa> {
+    return this.http.post<Capa>(`${this.base}/capas/${id}/reopen`, { reason });
   }
 
   // Documents

@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { CAPAStatus } from '../common/enums/status.enum';
+import { CapaSubtask } from './capa-subtask.entity';
 import { NonConformity } from './non-conformity.entity';
 import { Organization } from './organization.entity';
 import { User } from './user.entity';
@@ -68,6 +69,29 @@ export class Capa {
 
   @OneToMany(() => NonConformity, (nc) => nc.capa)
   nonConformities!: NonConformity[];
+
+  @OneToMany(() => CapaSubtask, (s) => s.capa, { cascade: false })
+  subtasks!: CapaSubtask[];
+
+  /** Ordered list of up to 5 "why" answers for root-cause analysis. */
+  @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+  fiveWhys!: string[];
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'validatedById' })
+  validatedBy!: User | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  validatedById!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  validatedAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  submittedForValidationAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  closedAt!: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;

@@ -1,18 +1,35 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { ROLE_LABELS, Role } from '../../core/models';
+import {
+  CAPAStatus,
+  CapaSubtask,
+  CapaSubtaskStatus,
+  ROLE_LABELS,
+  Role,
+} from '../../core/models';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, RouterLink],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatSelectModule,
+    MatSnackBarModule,
+    RouterLink,
+  ],
   template: `
     <h1>Welcome, {{ user()?.firstName }}</h1>
     <p class="role">
@@ -56,6 +73,51 @@ import { ROLE_LABELS, Role } from '../../core/models';
         </div>
       </mat-card>
     </div>
+
+    <mat-card class="tasks" *ngIf="canSeeQms">
+      <div class="tasks-head">
+        <h3>My Tasks</h3>
+        <span class="muted">
+          {{ openTaskCount() }} open
+          <ng-container *ngIf="overdueCount()">
+            &middot; <span class="overdue">{{ overdueCount() }} overdue</span>
+          </ng-container>
+        </span>
+      </div>
+      <p class="muted" *ngIf="!myTasks().length">
+        You have no CAPA subtasks assigned to you.
+      </p>
+      <ul class="task-list" *ngIf="myTasks().length">
+        <li *ngFor="let t of myTasks()">
+          <div class="t-main">
+            <a [routerLink]="['/capas', t.capaId]" class="t-title">
+              {{ t.title }}
+            </a>
+            <div class="muted small">
+              <span *ngIf="t.capa">{{ t.capa.code }} &middot; </span>
+              <span *ngIf="t.dueDate">
+                Due {{ t.dueDate | date: 'mediumDate' }}
+                <span
+                  *ngIf="isOverdue(t)"
+                  class="overdue">
+                  (overdue)
+                </span>
+              </span>
+              <span *ngIf="!t.dueDate">No due date</span>
+            </div>
+          </div>
+          <mat-select
+            [value]="t.status"
+            [disabled]="!canUpdateTask(t)"
+            (selectionChange)="updateTaskStatus(t, $event.value)"
+            class="t-status">
+            <mat-option [value]="'todo'">To do</mat-option>
+            <mat-option [value]="'in_progress'">In progress</mat-option>
+            <mat-option [value]="'done'">Done</mat-option>
+          </mat-select>
+        </li>
+      </ul>
+    </mat-card>
 
     <mat-card class="actions">
       <h3>Quick Actions</h3>
@@ -136,14 +198,67 @@ import { ROLE_LABELS, Role } from '../../core/models';
       .links a:hover {
         background: #e0f2fe;
       }
+      .tasks {
+        margin-top: 24px;
+        padding: 18px !important;
+      }
+      .tasks-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+      }
+      .tasks-head h3 {
+        margin: 0;
+      }
+      .muted {
+        color: #64748b;
+        font-size: 13px;
+      }
+      .small {
+        font-size: 12px;
+      }
+      .overdue {
+        color: #b91c1c;
+        font-weight: 500;
+      }
+      .task-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .task-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-top: 1px solid #e2e8f0;
+        gap: 12px;
+      }
+      .task-list li:first-child {
+        border-top: none;
+      }
+      .t-title {
+        color: #1e293b;
+        font-weight: 500;
+        text-decoration: none;
+      }
+      .t-title:hover {
+        text-decoration: underline;
+      }
+      .t-status {
+        min-width: 130px;
+      }
     `,
   ],
 })
 export class DashboardComponent {
   private auth = inject(AuthService);
   private api = inject(ApiService);
+  private snack = inject(MatSnackBar);
 
   user = this.auth.user;
+  myTasks = signal<CapaSubtask[]>([]);
 
   stats = signal({
     organizations: 0,
@@ -201,6 +316,57 @@ export class DashboardComponent {
         capas: data.capas.length,
         documents: data.documents.length,
       });
+    });
+
+    if (this.canSeeQms) {
+      this.loadMyTasks();
+    }
+  }
+
+  private loadMyTasks() {
+    this.api
+      .mySubtasks()
+      .pipe(catchError(() => of([] as CapaSubtask[])))
+      .subscribe((t) => this.myTasks.set(t));
+  }
+
+  openTaskCount(): number {
+    return this.myTasks().filter(
+      (t) => t.status !== CapaSubtaskStatus.DONE,
+    ).length;
+  }
+
+  overdueCount(): number {
+    return this.myTasks().filter((t) => this.isOverdue(t)).length;
+  }
+
+  isOverdue(t: CapaSubtask): boolean {
+    if (!t.dueDate || t.status === CapaSubtaskStatus.DONE) return false;
+    return new Date(t.dueDate).getTime() < Date.now();
+  }
+
+  canUpdateTask(t: CapaSubtask): boolean {
+    const capaStatus = t.capa?.status;
+    if (
+      capaStatus === CAPAStatus.CLOSED ||
+      capaStatus === CAPAStatus.PENDING_VALIDATION
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  updateTaskStatus(t: CapaSubtask, value: CapaSubtaskStatus) {
+    if (value === t.status) return;
+    this.api.updateCapaSubtask(t.id, { status: value }).subscribe({
+      next: () => {
+        this.snack.open('Task updated', 'OK', { duration: 2000 });
+        this.loadMyTasks();
+      },
+      error: (e) =>
+        this.snack.open(e?.error?.message || 'Error', 'Close', {
+          duration: 4000,
+        }),
     });
   }
 
