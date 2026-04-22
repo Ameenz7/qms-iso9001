@@ -1,4 +1,8 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import {
+  APP_INITIALIZER,
+  ApplicationConfig,
+  provideZoneChangeDetection,
+} from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -6,6 +10,7 @@ import { provideQuillConfig } from 'ngx-quill/config';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth.interceptor';
+import { AuthService } from './core/auth.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -16,5 +21,11 @@ export const appConfig: ApplicationConfig = {
     provideQuillConfig({
       theme: 'snow',
     }),
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      deps: [AuthService],
+      useFactory: (auth: AuthService) => () => auth.bootstrap(),
+    },
   ],
 };
