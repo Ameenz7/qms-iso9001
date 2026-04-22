@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,7 +13,7 @@ import { AuthenticatedUser } from '../../common/decorators/current-user.decorato
 import { DocumentAttachment } from '../../entities/document-attachment.entity';
 import { QmsDocument } from '../../entities/document.entity';
 import { AuditService } from '../audit/audit.service';
-import { LocalDiskStorage } from '../storage/file-storage';
+import { FILE_STORAGE, FileStorage } from '../storage/file-storage';
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 MB
 
@@ -23,7 +24,7 @@ export class AttachmentsService {
     private readonly attachmentRepo: Repository<DocumentAttachment>,
     @InjectRepository(QmsDocument)
     private readonly docRepo: Repository<QmsDocument>,
-    private readonly storage: LocalDiskStorage,
+    @Inject(FILE_STORAGE) private readonly storage: FileStorage,
     private readonly audit: AuditService,
   ) {}
 

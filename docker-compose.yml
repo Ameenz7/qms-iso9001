@@ -16,6 +16,37 @@ services:
       timeout: 3s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    container_name: qms-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # Web console
+    volumes:
+      - qms_minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  createbuckets:
+    image: minio/mc:latest
+    container_name: qms-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set qms http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin};
+      mc mb --ignore-existing qms/${S3_BUCKET:-qms-attachments};
+      exit 0;
+      "
+
   backend:
     build: ./backend
     container_name: qms-backend
@@ -34,6 +65,15 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-QMS <onboarding@resend.dev>}
       APP_URL: ${APP_URL:-http://localhost:4200}
+      # Storage — MinIO by default in Docker; set STORAGE_DRIVER=local to
+      # fall back to the local-disk backend (UPLOAD_DIR below).
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-minio}
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-qms-attachments}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_FORCE_PATH_STYLE: "true"
       UPLOAD_DIR: /data/uploads
     ports:
       - "3000:3000"
@@ -42,6 +82,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
 
   frontend:
     build: ./frontend
@@ -54,3 +96,4 @@ services:
 volumes:
   qms_pgdata:
   qms_uploads:
+  qms_minio:
