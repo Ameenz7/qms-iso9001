@@ -5,10 +5,13 @@ import { environment } from '../../environments/environment';
 import {
   AuditLog,
   Capa,
+  CreateInviteResponse,
+  InviteVerifyResponse,
   NonConformity,
   Organization,
   Payment,
   QmsDocument,
+  UserInvite,
   UserRecord,
 } from './models';
 
@@ -75,6 +78,37 @@ export class ApiService {
   }
   deleteUser(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/users/${id}`);
+  }
+
+  // Invites
+  listInvites(): Observable<UserInvite[]> {
+    return this.http.get<UserInvite[]>(`${this.base}/invites`);
+  }
+  createInvite(body: {
+    email: string;
+    role: string;
+    organizationId?: string;
+  }): Observable<CreateInviteResponse> {
+    return this.http.post<CreateInviteResponse>(`${this.base}/invites`, body);
+  }
+  revokeInvite(id: string): Observable<UserInvite> {
+    return this.http.delete<UserInvite>(`${this.base}/invites/${id}`);
+  }
+  verifyInvite(token: string): Observable<InviteVerifyResponse> {
+    return this.http.get<InviteVerifyResponse>(
+      `${this.base}/invites/verify/${encodeURIComponent(token)}`,
+    );
+  }
+  acceptInvite(body: {
+    token: string;
+    firstName: string;
+    lastName: string;
+    password: string;
+  }): Observable<{ id: string; email: string }> {
+    return this.http.post<{ id: string; email: string }>(
+      `${this.base}/invites/accept`,
+      body,
+    );
   }
 
   // Non-Conformities

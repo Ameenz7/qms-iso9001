@@ -64,6 +64,30 @@ export interface UserRecord extends AuthUser {
   updatedAt: string;
 }
 
+export interface UserInvite {
+  id: string;
+  email: string;
+  role: Role;
+  organizationId: string | null;
+  expiresAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+  invitedById: string | null;
+  createdAt: string;
+}
+
+export interface CreateInviteResponse {
+  invite: UserInvite;
+  acceptUrl: string;
+}
+
+export interface InviteVerifyResponse {
+  email: string;
+  role: Role;
+  organizationName: string | null;
+  expiresAt: string;
+}
+
 export enum NCSeverity {
   LOW = 'low',
   MEDIUM = 'medium',

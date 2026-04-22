@@ -9,6 +9,13 @@ export const routes: Routes = [
       import('./features/auth/login.component').then((m) => m.LoginComponent),
   },
   {
+    path: 'accept-invite',
+    loadComponent: () =>
+      import('./features/auth/accept-invite.component').then(
+        (m) => m.AcceptInviteComponent,
+      ),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>

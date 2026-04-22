@@ -7,6 +7,7 @@ import {
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import {
   MAT_DIALOG_DATA,
   MatDialog,
@@ -22,7 +23,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { ROLE_LABELS, Role, UserRecord } from '../../core/models';
+import { ROLE_LABELS, Role, UserInvite, UserRecord } from '../../core/models';
+import {
+  InviteDialogComponent,
+  InviteLinkDialogComponent,
+} from './invite-dialog.component';
 
 @Component({
   selector: 'app-user-dialog',
@@ -38,16 +43,12 @@ import { ROLE_LABELS, Role, UserRecord } from '../../core/models';
     MatSlideToggleModule,
   ],
   template: `
-    <h2 mat-dialog-title>{{ data.user ? 'Edit User' : 'New User' }}</h2>
+    <h2 mat-dialog-title>Edit User</h2>
     <mat-dialog-content>
       <form [formGroup]="form" class="form">
         <mat-form-field appearance="outline">
           <mat-label>Email</mat-label>
-          <input
-            matInput
-            formControlName="email"
-            type="email"
-            [readonly]="!!data.user" />
+          <input matInput formControlName="email" type="email" readonly />
         </mat-form-field>
         <div class="row">
           <mat-form-field appearance="outline">
@@ -68,12 +69,13 @@ import { ROLE_LABELS, Role, UserRecord } from '../../core/models';
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>{{ data.user ? 'New Password (optional)' : 'Password' }}</mat-label>
+          <mat-label>New Password (leave blank to keep)</mat-label>
           <input matInput formControlName="password" type="password" />
+          <mat-error *ngIf="form.controls.password.hasError('minlength')">
+            Minimum 6 characters
+          </mat-error>
         </mat-form-field>
-        <mat-slide-toggle
-          *ngIf="data.user"
-          formControlName="isActive">
+        <mat-slide-toggle formControlName="isActive">
           Active
         </mat-slide-toggle>
       </form>
@@ -114,9 +116,8 @@ export class UserDialogComponent {
   constructor(
     public dialogRef: MatDialogRef<UserDialogComponent>,
     @Inject(MAT_DIALOG_DATA)
-    public data: { user?: UserRecord; actorRole: Role },
+    public data: { user: UserRecord; actorRole: Role },
   ) {
-    const editing = !!data.user;
     if (data.actorRole === Role.SUPER_ADMIN) {
       this.availableRoles = [
         Role.SUPER_ADMIN,
@@ -128,18 +129,12 @@ export class UserDialogComponent {
       this.availableRoles = [Role.QUALITY_MANAGER, Role.EMPLOYEE];
     }
     this.form = this.fb.nonNullable.group({
-      email: [
-        { value: data.user?.email ?? '', disabled: editing },
-        [Validators.required, Validators.email],
-      ],
-      firstName: [data.user?.firstName ?? '', [Validators.required]],
-      lastName: [data.user?.lastName ?? '', [Validators.required]],
-      role: [data.user?.role ?? Role.EMPLOYEE, [Validators.required]],
-      password: [
-        '',
-        editing ? [Validators.minLength(6)] : [Validators.minLength(6), Validators.required],
-      ],
-      isActive: [data.user?.isActive ?? true],
+      email: [{ value: data.user.email, disabled: true }],
+      firstName: [data.user.firstName, [Validators.required]],
+      lastName: [data.user.lastName, [Validators.required]],
+      role: [data.user.role, [Validators.required]],
+      password: ['', [Validators.minLength(6)]],
+      isActive: [data.user.isActive],
     });
   }
 
@@ -153,14 +148,9 @@ export class UserDialogComponent {
       firstName: v.firstName,
       lastName: v.lastName,
       role: v.role,
+      isActive: v.isActive,
     };
-    if (!this.data.user) {
-      payload['email'] = v.email;
-      payload['password'] = v.password;
-    } else {
-      payload['isActive'] = v.isActive;
-      if (v.password) payload['password'] = v.password;
-    }
+    if (v.password) payload['password'] = v.password;
     this.dialogRef.close(payload);
   }
 }
@@ -176,6 +166,7 @@ export class UserDialogComponent {
     MatIconModule,
     MatDialogModule,
     MatSnackBarModule,
+    MatChipsModule,
   ],
   template: `
     <div class="header">
@@ -184,8 +175,8 @@ export class UserDialogComponent {
         mat-flat-button
         color="primary"
         *ngIf="canManage"
-        (click)="openNew()">
-        <mat-icon>add</mat-icon> New User
+        (click)="openInvite()">
+        <mat-icon>mail</mat-icon> Invite User
       </button>
     </div>
 
@@ -234,6 +225,55 @@ export class UserDialogComponent {
       </table>
       <p class="empty" *ngIf="!users().length">No users yet.</p>
     </mat-card>
+
+    <h2 class="section">Pending Invitations</h2>
+    <mat-card>
+      <table mat-table [dataSource]="invites()" class="full-width">
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let i">{{ i.email }}</td>
+        </ng-container>
+        <ng-container matColumnDef="role">
+          <th mat-header-cell *matHeaderCellDef>Role</th>
+          <td mat-cell *matCellDef="let i">{{ roleLabel(i.role) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let i">
+            <span class="chip" [class]="inviteStatusClass(i)">
+              {{ inviteStatus(i) }}
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="expires">
+          <th mat-header-cell *matHeaderCellDef>Expires</th>
+          <td mat-cell *matCellDef="let i">
+            {{ i.expiresAt | date: 'medium' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="sent">
+          <th mat-header-cell *matHeaderCellDef>Sent</th>
+          <td mat-cell *matCellDef="let i">
+            {{ i.createdAt | date: 'medium' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let i" class="right">
+            <button
+              *ngIf="canManage && isPending(i)"
+              mat-icon-button
+              color="warn"
+              (click)="revoke(i)">
+              <mat-icon>block</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="inviteCols"></tr>
+        <tr mat-row *matRowDef="let row; columns: inviteCols"></tr>
+      </table>
+      <p class="empty" *ngIf="!invites().length">No invitations yet.</p>
+    </mat-card>
   `,
   styles: [
     `
@@ -246,12 +286,37 @@ export class UserDialogComponent {
       h1 {
         margin: 0;
       }
+      .section {
+        margin: 32px 0 16px;
+        font-size: 18px;
+      }
       .right {
         text-align: right;
       }
       .empty {
         padding: 16px;
         color: #64748b;
+      }
+      .chip {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #f1f5f9;
+        color: #475569;
+      }
+      .chip.pending {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+      .chip.accepted {
+        background: #dcfce7;
+        color: #15803d;
+      }
+      .chip.expired,
+      .chip.revoked {
+        background: #fef2f2;
+        color: #b91c1c;
       }
     `,
   ],
@@ -263,7 +328,9 @@ export class UsersComponent {
   private auth = inject(AuthService);
 
   users = signal<UserRecord[]>([]);
+  invites = signal<UserInvite[]>([]);
   cols = ['email', 'name', 'role', 'active', 'actions'];
+  inviteCols = ['email', 'role', 'status', 'expires', 'sent', 'actions'];
 
   get canManage(): boolean {
     return this.auth.hasRole(Role.SUPER_ADMIN, Role.ADMIN_OWNER);
@@ -283,25 +350,74 @@ export class UsersComponent {
 
   refresh() {
     this.api.listUsers().subscribe((u) => this.users.set(u));
+    this.api.listInvites().subscribe({
+      next: (i) => this.invites.set(i),
+      error: () => this.invites.set([]),
+    });
   }
 
-  openNew() {
-    const ref = this.dialog.open(UserDialogComponent, {
+  isPending(invite: UserInvite): boolean {
+    return (
+      !invite.acceptedAt &&
+      !invite.revokedAt &&
+      new Date(invite.expiresAt).getTime() > Date.now()
+    );
+  }
+
+  inviteStatus(invite: UserInvite): string {
+    if (invite.acceptedAt) return 'Accepted';
+    if (invite.revokedAt) return 'Revoked';
+    if (new Date(invite.expiresAt).getTime() < Date.now()) return 'Expired';
+    return 'Pending';
+  }
+
+  inviteStatusClass(invite: UserInvite): string {
+    return this.inviteStatus(invite).toLowerCase();
+  }
+
+  openInvite() {
+    const ref = this.dialog.open(InviteDialogComponent, {
       data: { actorRole: this.auth.user()?.role },
       width: '520px',
     });
     ref.afterClosed().subscribe((payload) => {
       if (!payload) return;
-      this.api.createUser(payload).subscribe({
-        next: () => {
-          this.snack.open('User created', 'OK', { duration: 2500 });
+      this.api.createInvite(payload).subscribe({
+        next: (res) => {
+          this.snack.open('Invitation sent', 'OK', { duration: 2500 });
+          this.dialog.open(InviteLinkDialogComponent, {
+            data: {
+              email: res.invite.email,
+              url: res.acceptUrl,
+              expiresAt: res.invite.expiresAt,
+            },
+            width: '560px',
+          });
           this.refresh();
         },
         error: (e) =>
-          this.snack.open(e?.error?.message || 'Error', 'Close', {
-            duration: 4000,
-          }),
+          this.snack.open(
+            e?.error?.message?.[0] || e?.error?.message || 'Error',
+            'Close',
+            { duration: 4000 },
+          ),
       });
+    });
+  }
+
+  revoke(invite: UserInvite) {
+    if (!confirm(`Revoke the invitation for "${invite.email}"?`)) return;
+    this.api.revokeInvite(invite.id).subscribe({
+      next: () => {
+        this.snack.open('Invitation revoked', 'OK', { duration: 2500 });
+        this.refresh();
+      },
+      error: (e) =>
+        this.snack.open(
+          e?.error?.message?.[0] || e?.error?.message || 'Error',
+          'Close',
+          { duration: 4000 },
+        ),
     });
   }
 
