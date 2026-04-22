@@ -33,7 +33,7 @@ export class AttachmentsController {
   }
 
   @Post(':id/attachments')
-  @Roles(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)
+  @Roles(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 50 * 1024 * 1024 },
@@ -73,7 +73,7 @@ export class AttachmentsController {
   }
 
   @Delete('attachments/:attachmentId')
-  @Roles(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)
+  @Roles(Role.ADMIN_OWNER)
   remove(
     @CurrentUser() user: AuthenticatedUser,
     @Param('attachmentId') attachmentId: string,

@@ -6,11 +6,14 @@ import {
   AuditLog,
   Capa,
   CreateInviteResponse,
+  CreateShareResponse,
   DocumentAttachment,
+  DocumentShare,
   InviteVerifyResponse,
   NonConformity,
   Organization,
   Payment,
+  PublicShareView,
   QmsDocument,
   UserInvite,
   UserRecord,
@@ -202,6 +205,37 @@ export class ApiService {
     return this.http.delete<void>(
       `${this.base}/documents/attachments/${attachmentId}`,
     );
+  }
+
+  // Document Shares (auth required)
+  listShares(documentId: string): Observable<DocumentShare[]> {
+    return this.http.get<DocumentShare[]>(
+      `${this.base}/documents/${documentId}/shares`,
+    );
+  }
+  createShare(
+    documentId: string,
+    body: { expiresInDays?: number; label?: string },
+  ): Observable<CreateShareResponse> {
+    return this.http.post<CreateShareResponse>(
+      `${this.base}/documents/${documentId}/shares`,
+      body,
+    );
+  }
+  revokeShare(id: string): Observable<DocumentShare> {
+    return this.http.delete<DocumentShare>(
+      `${this.base}/documents/shares/${id}`,
+    );
+  }
+
+  // Public share viewer (no auth)
+  getPublicShare(token: string): Observable<PublicShareView> {
+    return this.http.get<PublicShareView>(
+      `${this.base}/public/shares/${encodeURIComponent(token)}`,
+    );
+  }
+  publicDownloadUrl(token: string, attachmentId: string): string {
+    return `${this.base}/public/shares/${encodeURIComponent(token)}/attachments/${attachmentId}/download`;
   }
 
   // Audit Logs
