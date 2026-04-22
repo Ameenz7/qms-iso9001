@@ -61,7 +61,7 @@ export class UsersService {
 
     const organizationId =
       actor.role === Role.SUPER_ADMIN
-        ? dto.organizationId ?? null
+        ? (dto.organizationId ?? null)
         : actor.organizationId;
 
     if (!organizationId && dto.role !== Role.SUPER_ADMIN) {

@@ -26,12 +26,37 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export enum OrganizationStatus {
+  ACTIVE = 'active',
+  GRACE = 'grace',
+  SUSPENDED = 'suspended',
+}
+
 export interface Organization {
   id: string;
   name: string;
   description: string | null;
+  plan: string;
+  monthlyPrice: string;
+  paidUntil: string | null;
+  status: OrganizationStatus;
+  suspendedAt: string | null;
+  suspensionReason: string | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface Payment {
+  id: string;
+  organizationId: string;
+  amount: string;
+  monthsCovered: number;
+  paidAt: string;
+  coversUntil: string;
+  note: string | null;
+  recordedById: string | null;
+  createdAt: string;
 }
 
 export interface UserRecord extends AuthUser {

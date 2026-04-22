@@ -144,12 +144,7 @@ export class MainLayoutComponent {
       label: 'Dashboard',
       icon: 'dashboard',
       link: '/dashboard',
-      roles: [
-        Role.SUPER_ADMIN,
-        Role.ADMIN_OWNER,
-        Role.QUALITY_MANAGER,
-        Role.EMPLOYEE,
-      ],
+      roles: [Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE],
     },
     {
       label: 'Organizations',
@@ -161,7 +156,7 @@ export class MainLayoutComponent {
       label: 'Users',
       icon: 'group',
       link: '/users',
-      roles: [Role.SUPER_ADMIN, Role.ADMIN_OWNER, Role.QUALITY_MANAGER],
+      roles: [Role.ADMIN_OWNER, Role.QUALITY_MANAGER],
     },
     {
       label: 'Non-Conformities',
@@ -185,7 +180,7 @@ export class MainLayoutComponent {
       label: 'Audit Logs',
       icon: 'history',
       link: '/audit-logs',
-      roles: [Role.SUPER_ADMIN, Role.ADMIN_OWNER, Role.QUALITY_MANAGER],
+      roles: [Role.ADMIN_OWNER, Role.QUALITY_MANAGER],
     },
   ];
 

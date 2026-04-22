@@ -15,10 +15,8 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN_OWNER, Role.QUALITY_MANAGER)
+  @Roles(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)
   list(@CurrentUser() user: AuthenticatedUser) {
-    const scopeId =
-      user.role === Role.SUPER_ADMIN ? null : user.organizationId;
-    return this.auditService.list(scopeId);
+    return this.auditService.list(user.organizationId);
   }
 }

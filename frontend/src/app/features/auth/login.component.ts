@@ -130,9 +130,11 @@ export class LoginComponent {
     this.error.set(null);
     const { email, password } = this.form.getRawValue();
     this.auth.login(email, password).subscribe({
-      next: () => {
+      next: (res) => {
         this.loading.set(false);
-        void this.router.navigate(['/dashboard']);
+        const landing =
+          res.user.role === 'super_admin' ? '/organizations' : '/dashboard';
+        void this.router.navigate([landing]);
       },
       error: (err) => {
         this.loading.set(false);

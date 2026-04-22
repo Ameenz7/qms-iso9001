@@ -25,28 +25,25 @@ export class UsersController {
   constructor(private readonly service: UsersService) {}
 
   @Get()
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN_OWNER, Role.QUALITY_MANAGER)
+  @Roles(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)
   list(@CurrentUser() user: AuthenticatedUser) {
     return this.service.list(user);
   }
 
   @Get(':id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN_OWNER, Role.QUALITY_MANAGER)
+  @Roles(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)
   get(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.service.findOne(user, id);
   }
 
   @Post()
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN_OWNER)
-  create(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateUserDto,
-  ) {
+  @Roles(Role.ADMIN_OWNER)
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateUserDto) {
     return this.service.create(user, dto);
   }
 
   @Patch(':id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN_OWNER)
+  @Roles(Role.ADMIN_OWNER)
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -56,11 +53,8 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN_OWNER)
-  remove(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ) {
+  @Roles(Role.ADMIN_OWNER)
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.service.remove(user, id);
   }
 }
