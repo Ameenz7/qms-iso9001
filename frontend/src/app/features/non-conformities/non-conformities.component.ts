@@ -18,8 +18,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { exportCsv } from '../../core/export.util';
@@ -172,6 +174,7 @@ export class NcLinkDialogComponent {
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
+    MatMenuModule,
     MatDialogModule,
     MatSnackBarModule,
   ],
@@ -231,11 +234,24 @@ export class NcLinkDialogComponent {
           <td mat-cell *matCellDef="let n" class="right">
             <button
               *ngIf="canLink && !n.capa"
-              mat-stroked-button
+              mat-flat-button
               color="primary"
-              (click)="openLink(n)">
-              <mat-icon>link</mat-icon> Link CAPA
+              (click)="promote(n)">
+              <mat-icon>upgrade</mat-icon> Promote to CAPA
             </button>
+            <button
+              *ngIf="canLink && !n.capa"
+              mat-icon-button
+              [matMenuTriggerFor]="rowMenu"
+              aria-label="More">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #rowMenu="matMenu">
+              <button mat-menu-item (click)="openLink(n)">
+                <mat-icon>link</mat-icon>
+                <span>Link existing CAPA</span>
+              </button>
+            </mat-menu>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="cols"></tr>
@@ -274,6 +290,7 @@ export class NonConformitiesComponent {
   private auth = inject(AuthService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
+  private router = inject(Router);
 
   ncs = signal<NonConformity[]>([]);
   capas = signal<Capa[]>([]);
@@ -368,6 +385,25 @@ export class NonConformitiesComponent {
           this.refresh();
         },
       });
+    });
+  }
+
+  promote(nc: NonConformity) {
+    if (!confirm(`Promote "${nc.title}" to a new CAPA?`)) return;
+    this.api.promoteNcToCapa(nc.id, {}).subscribe({
+      next: (capa) => {
+        this.snack.open(`CAPA ${capa.code} created`, 'Open', {
+          duration: 3500,
+        })
+          .onAction()
+          .subscribe(() => this.router.navigate(['/capas', capa.id]));
+        this.refresh();
+        this.router.navigate(['/capas', capa.id]);
+      },
+      error: (e) =>
+        this.snack.open(e?.error?.message || 'Error', 'Close', {
+          duration: 4000,
+        }),
     });
   }
 }

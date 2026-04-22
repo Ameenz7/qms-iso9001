@@ -19,6 +19,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { exportCsv } from '../../core/export.util';
@@ -180,6 +182,8 @@ export class CapaDialogComponent {
     MatIconModule,
     MatDialogModule,
     MatSnackBarModule,
+    MatTooltipModule,
+    RouterLink,
   ],
   template: `
     <div class="header">
@@ -206,7 +210,9 @@ export class CapaDialogComponent {
         </ng-container>
         <ng-container matColumnDef="title">
           <th mat-header-cell *matHeaderCellDef>Title</th>
-          <td mat-cell *matCellDef="let c">{{ c.title }}</td>
+          <td mat-cell *matCellDef="let c">
+            <a [routerLink]="['/capas', c.id]" class="link">{{ c.title }}</a>
+          </td>
         </ng-container>
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>Status</th>
@@ -237,6 +243,12 @@ export class CapaDialogComponent {
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let c" class="right">
+            <a
+              mat-icon-button
+              [routerLink]="['/capas', c.id]"
+              matTooltip="Open">
+              <mat-icon>open_in_new</mat-icon>
+            </a>
             <button
               *ngIf="canManage"
               mat-icon-button
@@ -279,6 +291,14 @@ export class CapaDialogComponent {
       .empty {
         padding: 16px;
         color: var(--notion-text-muted);
+      }
+      .link {
+        color: var(--notion-accent, #2563eb);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .link:hover {
+        text-decoration: underline;
       }
     `,
   ],
@@ -330,7 +350,9 @@ export class CapasComponent {
   }
 
   statusChip(s: CAPAStatus): string {
-    if (s === CAPAStatus.CLOSED || s === CAPAStatus.VERIFIED) return 'chip-ok';
+    if (s === CAPAStatus.CLOSED) return 'chip-ok';
+    if (s === CAPAStatus.PENDING_VALIDATION) return 'chip-info';
+    if (s === CAPAStatus.REOPENED) return 'chip-warn';
     if (s === CAPAStatus.OPEN) return 'chip-warn';
     return 'chip-info';
   }
