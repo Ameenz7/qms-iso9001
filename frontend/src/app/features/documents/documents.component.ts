@@ -20,6 +20,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { QuillEditorComponent } from 'ngx-quill';
 import { ApiService } from '../../core/api.service';
@@ -30,6 +31,7 @@ import {
   exportPdf,
 } from '../../core/export.util';
 import {
+  DocumentAttachment,
   DocumentStatus,
   QmsDocument,
   Role,
@@ -185,6 +187,7 @@ export class DocumentDialogComponent {
     MatSnackBarModule,
     MatExpansionModule,
     MatMenuModule,
+    MatTooltipModule,
   ],
   template: `
     <div class="header">
@@ -216,7 +219,9 @@ export class DocumentDialogComponent {
 
     <mat-card>
       <mat-accordion multi>
-        <mat-expansion-panel *ngFor="let d of docs()">
+        <mat-expansion-panel
+          *ngFor="let d of docs()"
+          (opened)="onPanelOpen(d)">
           <mat-expansion-panel-header>
             <mat-panel-title>
               <strong>{{ d.code }}</strong> &nbsp; — &nbsp; {{ d.title }}
@@ -260,6 +265,67 @@ export class DocumentDialogComponent {
           </div>
 
           <div class="content" [innerHTML]="d.content"></div>
+
+          <div class="attachments">
+            <div class="attachments-header">
+              <h4>Attachments</h4>
+              <button
+                *ngIf="canManage"
+                mat-stroked-button
+                (click)="fileInput.click()">
+                <mat-icon>attach_file</mat-icon> Attach file
+              </button>
+              <input
+                type="file"
+                #fileInput
+                hidden
+                (change)="onFilePicked(d, $event)" />
+            </div>
+            <table
+              *ngIf="attachments()[d.id]?.length; else noAtt"
+              class="att-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Size</th>
+                  <th>v</th>
+                  <th>Uploaded</th>
+                  <th>SHA-256</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let a of attachments()[d.id]">
+                  <td>{{ a.filename }}</td>
+                  <td>{{ formatSize(a.size) }}</td>
+                  <td>v{{ a.documentVersion }}</td>
+                  <td>{{ a.createdAt | date: 'short' }}</td>
+                  <td class="sha" [title]="a.sha256">
+                    {{ a.sha256.slice(0, 10) }}…
+                  </td>
+                  <td class="actions">
+                    <button
+                      mat-icon-button
+                      (click)="download(a)"
+                      matTooltip="Download">
+                      <mat-icon>download</mat-icon>
+                    </button>
+                    <button
+                      *ngIf="canManage"
+                      mat-icon-button
+                      color="warn"
+                      (click)="removeAttachment(d, a)"
+                      matTooltip="Delete">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <ng-template #noAtt>
+              <p class="empty-att">No files attached.</p>
+            </ng-template>
+          </div>
 
           <div *ngIf="expanded()[d.id] as detail">
             <h4>Version History</h4>
@@ -310,6 +376,46 @@ export class DocumentDialogComponent {
       }
       .content :first-child { margin-top: 0; }
       .content :last-child { margin-bottom: 0; }
+      .attachments {
+        margin-top: 16px;
+      }
+      .attachments-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .attachments-header h4 {
+        margin: 0;
+      }
+      .att-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .att-table th,
+      .att-table td {
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--notion-border);
+        text-align: left;
+      }
+      .att-table th {
+        color: var(--notion-text-muted);
+        font-weight: 500;
+      }
+      .att-table .sha {
+        font-family: ui-monospace, monospace;
+        color: var(--notion-text-muted);
+      }
+      .att-table .actions {
+        width: 1%;
+        white-space: nowrap;
+      }
+      .empty-att {
+        color: var(--notion-text-muted);
+        font-size: 13px;
+        margin: 4px 0 0;
+      }
     `,
   ],
 })
@@ -321,6 +427,7 @@ export class DocumentsComponent {
 
   docs = signal<QmsDocument[]>([]);
   expanded = signal<Record<string, QmsDocument>>({});
+  attachments = signal<Record<string, DocumentAttachment[]>>({});
 
   get canManage(): boolean {
     return this.auth.hasRole(Role.QUALITY_MANAGER, Role.ADMIN_OWNER);
@@ -381,6 +488,69 @@ export class DocumentsComponent {
         },
       });
     });
+  }
+
+  onPanelOpen(doc: QmsDocument) {
+    this.loadAttachments(doc.id);
+  }
+
+  loadAttachments(documentId: string) {
+    this.api.listAttachments(documentId).subscribe((list) => {
+      this.attachments.update((state) => ({ ...state, [documentId]: list }));
+    });
+  }
+
+  onFilePicked(doc: QmsDocument, ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.api.uploadAttachment(doc.id, file).subscribe({
+      next: () => {
+        this.snack.open('File uploaded', 'OK', { duration: 2500 });
+        this.loadAttachments(doc.id);
+      },
+      error: (e) =>
+        this.snack.open(
+          e?.error?.message || 'Upload failed',
+          'Close',
+          { duration: 4000 },
+        ),
+    });
+  }
+
+  download(a: DocumentAttachment) {
+    this.api.downloadAttachment(a.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = a.filename;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () =>
+        this.snack.open('Download failed', 'Close', { duration: 3000 }),
+    });
+  }
+
+  removeAttachment(doc: QmsDocument, a: DocumentAttachment) {
+    if (!confirm(`Delete "${a.filename}"?`)) return;
+    this.api.deleteAttachment(a.id).subscribe({
+      next: () => {
+        this.snack.open('File deleted', 'OK', { duration: 2500 });
+        this.loadAttachments(doc.id);
+      },
+    });
+  }
+
+  formatSize(size: string): string {
+    const n = Number(size);
+    if (!Number.isFinite(n)) return size;
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+    return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
   }
 
   remove(doc: QmsDocument) {

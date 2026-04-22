@@ -6,6 +6,7 @@ import {
   AuditLog,
   Capa,
   CreateInviteResponse,
+  DocumentAttachment,
   InviteVerifyResponse,
   NonConformity,
   Organization,
@@ -172,6 +173,35 @@ export class ApiService {
   }
   deleteDocument(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/documents/${id}`);
+  }
+
+  // Document Attachments
+  listAttachments(documentId: string): Observable<DocumentAttachment[]> {
+    return this.http.get<DocumentAttachment[]>(
+      `${this.base}/documents/${documentId}/attachments`,
+    );
+  }
+  uploadAttachment(
+    documentId: string,
+    file: File,
+  ): Observable<DocumentAttachment> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<DocumentAttachment>(
+      `${this.base}/documents/${documentId}/attachments`,
+      form,
+    );
+  }
+  downloadAttachment(attachmentId: string): Observable<Blob> {
+    return this.http.get(
+      `${this.base}/documents/attachments/${attachmentId}/download`,
+      { responseType: 'blob' },
+    );
+  }
+  deleteAttachment(attachmentId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.base}/documents/attachments/${attachmentId}`,
+    );
   }
 
   // Audit Logs
