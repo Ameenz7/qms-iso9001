@@ -124,185 +124,354 @@ export class DocUploadDialogComponent {
     MatTooltipModule,
   ],
   template: `
-    <h2 mat-dialog-title>{{ data.doc.title }}</h2>
-    <mat-dialog-content>
-      <div class="meta-row">
-        <span class="chip-{{ data.doc.status.toLowerCase() }}">{{ data.doc.status }}</span>
-        <span class="dim">Type: {{ data.doc.type }}</span>
-        <span class="dim">
-          Previewing: v{{ previewVersion().versionNumber }} ·
-          {{ previewVersion().fileName }}
-        </span>
-      </div>
-
-      <div class="preview-frame" [ngSwitch]="previewKind()">
-        <iframe
-          *ngSwitchCase="'pdf'"
-          [src]="previewSafeUrl()"
-          title="Document preview"
-        ></iframe>
-        <img
-          *ngSwitchCase="'image'"
-          [src]="previewUrl()"
-          alt="Document preview"
-        />
-        <pre *ngSwitchCase="'text'">{{ textPreview() }}</pre>
-        <div *ngSwitchDefault class="no-preview">
-          <mat-icon>insert_drive_file</mat-icon>
-          <div>
-            <strong>No inline preview available</strong>
-            <div class="dim">
-              {{ previewVersion().mimeType || 'unknown type' }} ·
-              {{ (previewVersion().fileSize / 1024) | number: '1.0-1' }} KB
-            </div>
+    <div class="viewer-shell">
+      <header class="viewer-topbar">
+        <button
+          mat-icon-button
+          mat-dialog-close
+          matTooltip="Close"
+          aria-label="Close"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+        <div class="title-block">
+          <div class="doc-title">{{ data.doc.title }}</div>
+          <div class="doc-sub">
+            {{ data.doc.type }} · v{{ previewVersion().versionNumber }} ·
+            {{ previewVersion().fileName }}
           </div>
-          <button mat-stroked-button class="ml-auto" (click)="download(previewVersion())">
-            <mat-icon>download</mat-icon> Download to inspect
-          </button>
         </div>
-      </div>
+        <span class="chip-{{ data.doc.status.toLowerCase() }} status-chip">
+          {{ data.doc.status }}
+        </span>
+        <span class="spacer"></span>
+        <button
+          mat-stroked-button
+          color="primary"
+          (click)="download(previewVersion())"
+        >
+          <mat-icon>download</mat-icon> Download
+        </button>
+      </header>
 
-      <h3>Metadata</h3>
-      <table class="meta">
-        <tr *ngFor="let m of data.doc.metadata">
-          <td>{{ m.key }}</td>
-          <td>{{ m.value }}</td>
-        </tr>
-        <tr *ngIf="data.doc.metadata.length === 0">
-          <td colspan="2" class="dim">No metadata</td>
-        </tr>
-      </table>
-
-      <h3>Versions</h3>
-      <table mat-table [dataSource]="data.doc.versions" class="full-width">
-        <ng-container matColumnDef="ver">
-          <th mat-header-cell *matHeaderCellDef>Version</th>
-          <td mat-cell *matCellDef="let v">
-            v{{ v.versionNumber }}
-            <span *ngIf="v.id === data.doc.currentVersionId" class="badge current">current</span>
-            <span
-              *ngIf="v.id !== data.doc.currentVersionId"
-              class="badge obsolete"
-            >obsolete</span>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="file">
-          <th mat-header-cell *matHeaderCellDef>File</th>
-          <td mat-cell *matCellDef="let v">{{ v.fileName }}</td>
-        </ng-container>
-        <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef>Uploaded</th>
-          <td mat-cell *matCellDef="let v">{{ v.createdAt | date: 'mediumDate' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="size">
-          <th mat-header-cell *matHeaderCellDef>Size</th>
-          <td mat-cell *matCellDef="let v">{{ (v.fileSize / 1024) | number: '1.0-1' }} KB</td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef class="actions-col">Actions</th>
-          <td mat-cell *matCellDef="let v" class="actions-col">
+      <div class="viewer-body">
+        <aside class="viewer-sidebar left">
+          <div class="sidebar-title">Versions</div>
+          <div class="version-list">
             <button
-              mat-icon-button
-              matTooltip="Preview this version"
+              type="button"
+              *ngFor="let v of orderedVersions()"
+              class="version-card"
+              [class.active]="v.id === previewVersion().id"
               (click)="preview(v)"
             >
-              <mat-icon>visibility</mat-icon>
+              <div class="version-row">
+                <span class="v-number">v{{ v.versionNumber }}</span>
+                <span
+                  class="badge"
+                  [class.current]="v.id === data.doc.currentVersionId"
+                  [class.obsolete]="v.id !== data.doc.currentVersionId"
+                >
+                  {{ v.id === data.doc.currentVersionId ? 'current' : 'obsolete' }}
+                </span>
+              </div>
+              <div class="v-file" [title]="v.fileName">{{ v.fileName }}</div>
+              <div class="v-meta">
+                {{ v.createdAt | date: 'mediumDate' }} ·
+                {{ (v.fileSize / 1024) | number: '1.0-1' }} KB
+              </div>
+              <div class="v-actions" (click)="$event.stopPropagation()">
+                <button
+                  mat-icon-button
+                  matTooltip="Download this version"
+                  (click)="download(v)"
+                >
+                  <mat-icon>download</mat-icon>
+                </button>
+              </div>
             </button>
+          </div>
+        </aside>
+
+        <section class="viewer-stage" [ngSwitch]="previewKind()">
+          <iframe
+            *ngSwitchCase="'pdf'"
+            [src]="previewSafeUrl()"
+            title="Document preview"
+          ></iframe>
+          <img
+            *ngSwitchCase="'image'"
+            [src]="previewUrl()"
+            alt="Document preview"
+          />
+          <pre *ngSwitchCase="'text'">{{ textPreview() }}</pre>
+          <div *ngSwitchDefault class="no-preview">
+            <mat-icon>insert_drive_file</mat-icon>
+            <div>
+              <strong>No inline preview available</strong>
+              <div class="dim">
+                {{ previewVersion().mimeType || 'unknown type' }} ·
+                {{ (previewVersion().fileSize / 1024) | number: '1.0-1' }} KB
+              </div>
+            </div>
             <button
-              mat-icon-button
-              matTooltip="Download this version"
-              (click)="download(v)"
+              mat-stroked-button
+              color="primary"
+              (click)="download(previewVersion())"
             >
-              <mat-icon>download</mat-icon>
+              <mat-icon>download</mat-icon> Download to inspect
             </button>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="['ver','file','date','size','actions']"></tr>
-        <tr mat-row *matRowDef="let row; columns: ['ver','file','date','size','actions']"></tr>
-      </table>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-stroked-button (click)="download(previewVersion())">
-        <mat-icon>download</mat-icon> Download current
-      </button>
-      <button mat-button mat-dialog-close>Close</button>
-    </mat-dialog-actions>
+          </div>
+        </section>
+
+        <aside class="viewer-sidebar right">
+          <div class="sidebar-title">Details</div>
+          <dl class="meta-grid">
+            <dt>Type</dt><dd>{{ data.doc.type }}</dd>
+            <dt>Status</dt>
+            <dd>
+              <span class="chip-{{ data.doc.status.toLowerCase() }}">
+                {{ data.doc.status }}
+              </span>
+            </dd>
+            <dt>Current version</dt>
+            <dd>v{{ currentVersion().versionNumber }}</dd>
+            <dt>Updated</dt>
+            <dd>{{ data.doc.updatedAt | date: 'medium' }}</dd>
+            <dt>Created</dt>
+            <dd>{{ data.doc.createdAt | date: 'medium' }}</dd>
+          </dl>
+
+          <div class="sidebar-title">Viewing version</div>
+          <dl class="meta-grid">
+            <dt>Version</dt><dd>v{{ previewVersion().versionNumber }}</dd>
+            <dt>File</dt>
+            <dd class="break-all">{{ previewVersion().fileName }}</dd>
+            <dt>Size</dt>
+            <dd>{{ (previewVersion().fileSize / 1024) | number: '1.0-1' }} KB</dd>
+            <dt>Type</dt>
+            <dd>{{ previewVersion().mimeType || 'unknown' }}</dd>
+            <dt>Uploaded</dt>
+            <dd>{{ previewVersion().createdAt | date: 'medium' }}</dd>
+          </dl>
+
+          <div class="sidebar-title">Metadata</div>
+          <dl class="meta-grid" *ngIf="data.doc.metadata.length">
+            <ng-container *ngFor="let m of data.doc.metadata">
+              <dt>{{ m.key }}</dt>
+              <dd>{{ m.value }}</dd>
+            </ng-container>
+          </dl>
+          <div class="empty-meta" *ngIf="!data.doc.metadata.length">
+            No metadata captured for this document.
+          </div>
+        </aside>
+      </div>
+    </div>
   `,
   styles: [
     `
-      .meta-row {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        margin-bottom: 16px;
-      }
-      .dim { color: #6b7280; font-size: 13px; }
-      .preview-frame {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        overflow: hidden;
-        background: #f9fafb;
-        margin-bottom: 16px;
-        height: 360px;
-        display: flex;
-        align-items: stretch;
-        justify-content: center;
-      }
-      .preview-frame iframe {
-        border: 0;
+      :host {
+        display: block;
         width: 100%;
         height: 100%;
       }
-      .preview-frame img {
+      .viewer-shell {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: #f9fafb;
+      }
+      .viewer-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .viewer-topbar .title-block { line-height: 1.2; }
+      .viewer-topbar .doc-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #111827;
+      }
+      .viewer-topbar .doc-sub {
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .viewer-topbar .spacer { flex: 1; }
+      .viewer-topbar .status-chip { margin-left: 8px; }
+      .viewer-body {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 260px 1fr 300px;
+        min-height: 0;
+      }
+      .viewer-sidebar {
+        background: #ffffff;
+        overflow-y: auto;
+        padding: 16px;
+      }
+      .viewer-sidebar.left { border-right: 1px solid #e5e7eb; }
+      .viewer-sidebar.right { border-left: 1px solid #e5e7eb; }
+      .sidebar-title {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #6b7280;
+        margin: 4px 0 10px;
+      }
+      .version-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .version-card {
+        all: unset;
+        cursor: pointer;
+        display: block;
+        position: relative;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 10px 12px;
+        transition:
+          border-color 0.15s ease,
+          background 0.15s ease;
+      }
+      .version-card:hover { background: #f3f4f6; }
+      .version-card.active {
+        border-color: #6366f1;
+        background: #eef2ff;
+        box-shadow: 0 0 0 1px #6366f1 inset;
+      }
+      .version-card .version-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 2px;
+      }
+      .version-card .v-number {
+        font-weight: 600;
+        color: #111827;
+      }
+      .version-card .v-file {
+        font-size: 12px;
+        color: #374151;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+      }
+      .version-card .v-meta {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 2px;
+      }
+      .version-card .v-actions {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+      }
+      .viewer-stage {
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+        min-height: 0;
+        background: #1f2937;
+      }
+      .viewer-stage iframe {
+        border: 0;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+      }
+      .viewer-stage img {
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
         margin: auto;
       }
-      .preview-frame pre {
+      .viewer-stage pre {
         margin: 0;
-        padding: 16px;
-        overflow: auto;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 12px;
-        white-space: pre-wrap;
-        background: #ffffff;
+        padding: 24px 32px;
         width: 100%;
+        background: #ffffff;
+        color: #111827;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        overflow: auto;
       }
       .no-preview {
+        margin: auto;
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 16px;
-        width: 100%;
-        mat-icon { color: #6366f1; font-size: 36px; height: 36px; width: 36px; }
+        gap: 16px;
+        padding: 24px 32px;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+        max-width: 520px;
+        color: #111827;
       }
-      .ml-auto { margin-left: auto; }
-      table.meta {
-        width: 100%;
-        margin-bottom: 16px;
-        td { padding: 4px 8px; }
-        td:first-child { color: #6b7280; width: 40%; }
+      .no-preview mat-icon {
+        color: #6366f1;
+        font-size: 40px;
+        height: 40px;
+        width: 40px;
       }
-      h3 { font-size: 14px; margin: 16px 0 8px; }
+      .dim { color: #6b7280; font-size: 13px; }
+      .meta-grid {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 6px 12px;
+        margin: 0 0 16px;
+        font-size: 13px;
+      }
+      .meta-grid dt {
+        color: #6b7280;
+        font-size: 12px;
+      }
+      .meta-grid dd {
+        margin: 0;
+        color: #111827;
+        word-break: break-word;
+      }
+      .break-all { word-break: break-all; }
+      .empty-meta {
+        font-size: 12px;
+        color: #9ca3af;
+        font-style: italic;
+      }
       .badge {
         display: inline-block;
-        margin-left: 8px;
         padding: 2px 8px;
         border-radius: 999px;
-        font-size: 11px;
-        font-weight: 600;
+        font-size: 10px;
+        font-weight: 700;
         text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
-      .badge.current {
-        background: #dbeafe;
-        color: #1d4ed8;
+      .badge.current { background: #dbeafe; color: #1d4ed8; }
+      .badge.obsolete { background: #f3f4f6; color: #6b7280; }
+
+      @media (max-width: 1024px) {
+        .viewer-body {
+          grid-template-columns: 220px 1fr;
+        }
+        .viewer-sidebar.right { display: none; }
       }
-      .badge.obsolete {
-        background: #f3f4f6;
-        color: #6b7280;
+      @media (max-width: 720px) {
+        .viewer-body {
+          grid-template-columns: 1fr;
+        }
+        .viewer-sidebar.left { display: none; }
       }
-      .actions-col { width: 120px; text-align: right; }
     `,
   ],
 })
@@ -319,6 +488,17 @@ export class DocDetailDialogComponent {
 
   constructor() {
     this.preview(this.initialVersion());
+  }
+
+  /** Newest version first so the current one is visually at the top. */
+  orderedVersions(): DocumentVersion[] {
+    return [...this.data.doc.versions].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    );
+  }
+
+  currentVersion(): DocumentVersion {
+    return this.initialVersion();
   }
 
   private initialVersion(): DocumentVersion {
@@ -542,7 +722,11 @@ export class DocumentsComponent implements OnInit {
 
   openDetail(doc: QmsDocument): void {
     this.dialog.open(DocDetailDialogComponent, {
-      width: '720px',
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'doc-viewer-dialog',
       data: { doc },
     });
   }

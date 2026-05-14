@@ -141,3 +141,22 @@ mat-card {
   gap: 8px;
   align-items: center;
 }
+
+/* Full-window document viewer dialog */
+.doc-viewer-dialog .mat-mdc-dialog-surface,
+.doc-viewer-dialog .mdc-dialog__surface {
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.doc-viewer-dialog .mat-mdc-dialog-container {
+  padding: 0 !important;
+}
+
+.doc-viewer-dialog .mat-mdc-dialog-content {
+  padding: 0;
+  margin: 0;
+  max-height: none;
+}
