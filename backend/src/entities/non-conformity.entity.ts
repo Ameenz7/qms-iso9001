@@ -4,6 +4,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -11,11 +12,16 @@ import { NCSeverity, NCStatus } from '../common/enums/status.enum';
 import { Capa } from './capa.entity';
 import { Organization } from './organization.entity';
 import { User } from './user.entity';
+import { RootCause } from './root-cause.entity';
+import { CorrectiveAction } from './corrective-action.entity';
 
 @Entity('non_conformities')
 export class NonConformity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  @Column({ nullable: true })
+  reference!: string | null;
 
   @Column()
   title!: string;
@@ -25,6 +31,12 @@ export class NonConformity {
 
   @Column({ nullable: true })
   area!: string;
+
+  @Column({ nullable: true })
+  department!: string | null;
+
+  @Column({ nullable: true })
+  detectionMethod!: string | null;
 
   @Column({ type: 'enum', enum: NCSeverity, default: NCSeverity.LOW })
   severity!: NCSeverity;
@@ -46,6 +58,13 @@ export class NonConformity {
   @Column({ type: 'uuid' })
   submittedById!: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  assignedToId!: string | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'assignedToId' })
+  assignedTo!: User | null;
+
   @ManyToOne(() => Capa, (c) => c.nonConformities, {
     nullable: true,
     onDelete: 'SET NULL',
@@ -55,6 +74,15 @@ export class NonConformity {
 
   @Column({ type: 'uuid', nullable: true })
   capaId!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  closureDate!: Date | null;
+
+  @OneToMany(() => RootCause, (rc) => rc.nc, { cascade: true })
+  rootCauses!: RootCause[];
+
+  @OneToMany(() => CorrectiveAction, (a) => a.nc, { cascade: true })
+  correctiveActions!: CorrectiveAction[];
 
   @CreateDateColumn()
   createdAt!: Date;

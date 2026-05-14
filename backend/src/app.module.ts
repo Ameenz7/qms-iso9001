@@ -17,6 +17,11 @@ import { Organization } from './entities/organization.entity';
 import { Payment } from './entities/payment.entity';
 import { UserInvite } from './entities/user-invite.entity';
 import { User } from './entities/user.entity';
+import { RootCause } from './entities/root-cause.entity';
+import { CorrectiveAction } from './entities/corrective-action.entity';
+import { AuditSchedule } from './entities/audit-schedule.entity';
+import { AuditChecklistItem } from './entities/audit-checklist-item.entity';
+import { AuditFinding } from './entities/audit-finding.entity';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CapasModule } from './modules/capas/capas.module';
@@ -28,6 +33,10 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { SeedModule } from './modules/seed/seed.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { UsersModule } from './modules/users/users.module';
+import { AuditScheduleModule } from './modules/audit-schedule/audit-schedule.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { ExportsModule } from './modules/exports/exports.module';
 
 @Module({
   imports: [
@@ -56,6 +65,11 @@ import { UsersModule } from './modules/users/users.module';
           Capa,
           CapaSubtask,
           AuditLog,
+          RootCause,
+          CorrectiveAction,
+          AuditSchedule,
+          AuditChecklistItem,
+          AuditFinding,
         ],
         synchronize: true,
       }),
@@ -71,6 +85,10 @@ import { UsersModule } from './modules/users/users.module';
     CapasModule,
     DocumentsModule,
     SeedModule,
+    AuditScheduleModule,
+    DashboardModule,
+    SettingsModule,
+    ExportsModule,
   ],
   providers: [
     {

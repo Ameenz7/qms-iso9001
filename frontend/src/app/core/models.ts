@@ -2,6 +2,7 @@ export enum Role {
   SUPER_ADMIN = 'super_admin',
   ADMIN_OWNER = 'admin_owner',
   QUALITY_MANAGER = 'quality_manager',
+  AUDITOR = 'auditor',
   EMPLOYEE = 'employee',
 }
 
@@ -9,6 +10,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   [Role.SUPER_ADMIN]: 'Super Admin',
   [Role.ADMIN_OWNER]: 'Admin Owner',
   [Role.QUALITY_MANAGER]: 'Quality Manager',
+  [Role.AUDITOR]: 'Auditor',
   [Role.EMPLOYEE]: 'Employee',
 };
 
@@ -124,17 +126,145 @@ export enum DocumentStatus {
   OBSOLETE = 'obsolete',
 }
 
+// Root Cause types
+export enum CauseType {
+  HUMAN = 'human',
+  PROCESS = 'process',
+  MATERIAL = 'material',
+  MACHINE = 'machine',
+  ENVIRONMENT = 'environment',
+  METHOD = 'method',
+}
+
+export enum VerificationStatus {
+  TO_VERIFY = 'to_verify',
+  CONFIRMED = 'confirmed',
+  UNCONFIRMED = 'unconfirmed',
+}
+
+export enum Likelihood {
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
+}
+
+export enum ActionType {
+  CORRECTIVE = 'corrective',
+  PREVENTIVE = 'preventive',
+}
+
+export enum ActionStatus {
+  PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  OVERDUE = 'overdue',
+  VERIFIED = 'verified',
+}
+
+export enum ActionPriority {
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
+}
+
+// Audit types
+export enum AuditType {
+  INTERNAL = 'internal',
+  EXTERNAL = 'external',
+  SUPPLIER = 'supplier',
+}
+
+export enum AuditFrequency {
+  ONCE = 'once',
+  MONTHLY = 'monthly',
+  QUARTERLY = 'quarterly',
+  ANNUAL = 'annual',
+}
+
+export enum AuditStatus {
+  SCHEDULED = 'scheduled',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+}
+
+export enum FindingType {
+  CONFORM = 'conform',
+  MINOR_NC = 'minor_nc',
+  MAJOR_NC = 'major_nc',
+  OBSERVATION = 'observation',
+}
+
+export enum FindingSeverity {
+  MINOR = 'minor',
+  MAJOR = 'major',
+  CRITICAL = 'critical',
+}
+
+export enum FindingStatus {
+  OPEN = 'open',
+  CLOSED = 'closed',
+}
+
+export interface RootCause {
+  id: string;
+  organizationId: string;
+  ncId: string;
+  hypothesis: string;
+  causeType: CauseType;
+  verificationMethod: string | null;
+  verificationStatus: VerificationStatus;
+  verifiedById: string | null;
+  verifiedBy?: AuthUser | null;
+  verifiedAt: string | null;
+  likelihood: Likelihood;
+  isPrimary: boolean;
+  actions?: CorrectiveAction[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CorrectiveAction {
+  id: string;
+  organizationId: string;
+  rootCauseId: string | null;
+  rootCause?: RootCause | null;
+  ncId: string;
+  description: string;
+  actionType: ActionType;
+  assignedToId: string | null;
+  assignedTo?: AuthUser | null;
+  priority: ActionPriority;
+  dueDate: string | null;
+  status: ActionStatus;
+  completionDate: string | null;
+  effectivenessCheckRequired: boolean;
+  effectivenessVerified: boolean;
+  createdById: string;
+  createdBy?: AuthUser;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NonConformity {
   id: string;
+  reference: string | null;
   title: string;
   description: string;
   area?: string;
+  department?: string | null;
+  detectionMethod?: string | null;
   severity: NCSeverity;
   status: NCStatus;
   submittedById: string;
   submittedBy?: AuthUser;
+  assignedToId?: string | null;
+  assignedTo?: AuthUser | null;
   capaId: string | null;
   capa?: Capa | null;
+  closureDate?: string | null;
+  rootCauses?: RootCause[];
+  correctiveActions?: CorrectiveAction[];
   createdAt: string;
   updatedAt: string;
 }
@@ -272,10 +402,95 @@ export interface PublicShareView {
 export interface AuditLog {
   id: string;
   userId: string | null;
+  user?: AuthUser | null;
   organizationId: string | null;
   action: string;
   entity: string;
   entityId: string;
   metadata: Record<string, unknown> | null;
+  oldValues: Record<string, unknown> | null;
+  newValues: Record<string, unknown> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  hashChain: string | null;
   createdAt: string;
+}
+
+// Audit Schedule types
+export interface AuditChecklistItem {
+  id: string;
+  organizationId: string;
+  auditId: string;
+  itemNumber: number;
+  requirement: string;
+  evidenceRequired: boolean;
+  findingType: FindingType | null;
+  findingDescription: string | null;
+  correctiveActionRequired: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditFinding {
+  id: string;
+  organizationId: string;
+  auditId: string;
+  description: string;
+  severity: FindingSeverity;
+  category: string | null;
+  referenceNcId: string | null;
+  status: FindingStatus;
+  closedById: string | null;
+  closedBy?: AuthUser | null;
+  closedDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditSchedule {
+  id: string;
+  organizationId: string;
+  type: AuditType;
+  title: string;
+  frequency: AuditFrequency;
+  plannedDate: string;
+  scope: string | null;
+  auditorId: string | null;
+  auditor?: AuthUser | null;
+  auditeeId: string | null;
+  auditee?: AuthUser | null;
+  status: AuditStatus;
+  completionDate: string | null;
+  createdById: string;
+  createdBy?: AuthUser;
+  checklistItems?: AuditChecklistItem[];
+  findings?: AuditFinding[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Dashboard types
+export interface DashboardKpis {
+  nc: { total: number; open: number; closedThisMonth: number; critical: number };
+  capa: { total: number; open: number };
+  documents: { total: number; draft: number; approved: number };
+  audits: { scheduled: number; completed: number };
+  actions: { total: number; pending: number; overdue: number };
+}
+
+export interface DashboardTask {
+  id: string;
+  type: 'subtask' | 'action';
+  title: string;
+  status: string;
+  dueDate: string | null;
+  reference: string | null;
+  link: string | null;
+}
+
+export interface ChartData {
+  ncTrend: Array<{ month: string; count: number }>;
+  ncByDepartment: Array<{ department: string; count: number }>;
+  actionsByStatus: Array<{ status: string; count: number }>;
+  docsByStatus: Array<{ status: string; count: number }>;
 }

@@ -177,10 +177,28 @@ export class MainLayoutComponent {
       roles: [Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE],
     },
     {
-      label: 'Audit Logs',
+      label: 'Audits',
+      icon: 'fact_check',
+      link: '/audits',
+      roles: [Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.AUDITOR],
+    },
+    {
+      label: 'Audit Trail',
       icon: 'history',
       link: '/audit-logs',
       roles: [Role.ADMIN_OWNER, Role.QUALITY_MANAGER],
+    },
+    {
+      label: 'Settings',
+      icon: 'settings',
+      link: '/settings',
+      roles: [
+        Role.SUPER_ADMIN,
+        Role.ADMIN_OWNER,
+        Role.QUALITY_MANAGER,
+        Role.AUDITOR,
+        Role.EMPLOYEE,
+      ],
     },
   ];
 

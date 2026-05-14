@@ -3,11 +3,19 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
+  AuditChecklistItem,
+  AuditFinding,
   AuditLog,
+  AuditSchedule,
+  AuthUser,
   Capa,
   CapaSubtask,
+  ChartData,
+  CorrectiveAction,
   CreateInviteResponse,
   CreateShareResponse,
+  DashboardKpis,
+  DashboardTask,
   DocumentAttachment,
   DocumentShare,
   InviteVerifyResponse,
@@ -16,6 +24,7 @@ import {
   Payment,
   PublicShareView,
   QmsDocument,
+  RootCause,
   UserInvite,
   UserRecord,
 } from './models';
@@ -143,6 +152,58 @@ export class ApiService {
   }
   deleteNc(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/non-conformities/${id}`);
+  }
+
+  // NC Root Causes
+  addRootCause(ncId: string, body: unknown): Observable<RootCause> {
+    return this.http.post<RootCause>(
+      `${this.base}/non-conformities/${ncId}/causes`,
+      body,
+    );
+  }
+  updateRootCause(
+    ncId: string,
+    causeId: string,
+    body: unknown,
+  ): Observable<RootCause> {
+    return this.http.patch<RootCause>(
+      `${this.base}/non-conformities/${ncId}/causes/${causeId}`,
+      body,
+    );
+  }
+  deleteRootCause(ncId: string, causeId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.base}/non-conformities/${ncId}/causes/${causeId}`,
+    );
+  }
+
+  // NC Corrective Actions
+  addCorrectiveAction(
+    ncId: string,
+    body: unknown,
+  ): Observable<CorrectiveAction> {
+    return this.http.post<CorrectiveAction>(
+      `${this.base}/non-conformities/${ncId}/actions`,
+      body,
+    );
+  }
+  updateCorrectiveAction(
+    ncId: string,
+    actionId: string,
+    body: unknown,
+  ): Observable<CorrectiveAction> {
+    return this.http.patch<CorrectiveAction>(
+      `${this.base}/non-conformities/${ncId}/actions/${actionId}`,
+      body,
+    );
+  }
+  deleteCorrectiveAction(
+    ncId: string,
+    actionId: string,
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.base}/non-conformities/${ncId}/actions/${actionId}`,
+    );
   }
 
   // CAPAs
@@ -307,7 +368,135 @@ export class ApiService {
   }
 
   // Audit Logs
-  listAuditLogs(): Observable<AuditLog[]> {
-    return this.http.get<AuditLog[]>(`${this.base}/audit-logs`);
+  listAuditLogs(filters?: {
+    entity?: string;
+    action?: string;
+    userId?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Observable<AuditLog[]> {
+    const params: Record<string, string> = {};
+    if (filters?.entity) params['entity'] = filters.entity;
+    if (filters?.action) params['action'] = filters.action;
+    if (filters?.userId) params['userId'] = filters.userId;
+    if (filters?.startDate) params['startDate'] = filters.startDate;
+    if (filters?.endDate) params['endDate'] = filters.endDate;
+    return this.http.get<AuditLog[]>(`${this.base}/audit-logs`, { params });
+  }
+
+  // Audit Schedules
+  listAuditSchedules(): Observable<AuditSchedule[]> {
+    return this.http.get<AuditSchedule[]>(`${this.base}/audit-schedules`);
+  }
+  getAuditSchedule(id: string): Observable<AuditSchedule> {
+    return this.http.get<AuditSchedule>(`${this.base}/audit-schedules/${id}`);
+  }
+  createAuditSchedule(body: unknown): Observable<AuditSchedule> {
+    return this.http.post<AuditSchedule>(`${this.base}/audit-schedules`, body);
+  }
+  updateAuditSchedule(
+    id: string,
+    body: unknown,
+  ): Observable<AuditSchedule> {
+    return this.http.patch<AuditSchedule>(
+      `${this.base}/audit-schedules/${id}`,
+      body,
+    );
+  }
+  deleteAuditSchedule(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/audit-schedules/${id}`);
+  }
+  updateChecklistItem(
+    itemId: string,
+    body: unknown,
+  ): Observable<AuditChecklistItem> {
+    return this.http.patch<AuditChecklistItem>(
+      `${this.base}/audit-schedules/checklist-items/${itemId}`,
+      body,
+    );
+  }
+  addAuditFinding(
+    auditId: string,
+    body: unknown,
+  ): Observable<AuditFinding> {
+    return this.http.post<AuditFinding>(
+      `${this.base}/audit-schedules/${auditId}/findings`,
+      body,
+    );
+  }
+  closeAuditFinding(findingId: string): Observable<AuditFinding> {
+    return this.http.post<AuditFinding>(
+      `${this.base}/audit-schedules/findings/${findingId}/close`,
+      {},
+    );
+  }
+
+  // Dashboard
+  getDashboardKpis(): Observable<DashboardKpis> {
+    return this.http.get<DashboardKpis>(`${this.base}/dashboard/kpis`);
+  }
+  getDashboardCharts(): Observable<ChartData> {
+    return this.http.get<ChartData>(`${this.base}/dashboard/charts`);
+  }
+  getDashboardTasks(): Observable<DashboardTask[]> {
+    return this.http.get<DashboardTask[]>(`${this.base}/dashboard/tasks`);
+  }
+
+  // Settings
+  getAccountSettings(): Observable<AuthUser> {
+    return this.http.get<AuthUser>(`${this.base}/settings/account`);
+  }
+  updateAccountSettings(body: {
+    firstName?: string;
+    lastName?: string;
+  }): Observable<AuthUser> {
+    return this.http.patch<AuthUser>(`${this.base}/settings/account`, body);
+  }
+  changePassword(body: {
+    currentPassword: string;
+    newPassword: string;
+  }): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.base}/settings/account/change-password`,
+      body,
+    );
+  }
+  getOrgSettings(): Observable<Organization> {
+    return this.http.get<Organization>(`${this.base}/settings/org`);
+  }
+  updateOrgSettings(body: {
+    name?: string;
+    description?: string;
+  }): Observable<Organization> {
+    return this.http.patch<Organization>(`${this.base}/settings/org`, body);
+  }
+  getOrgUsers(): Observable<UserRecord[]> {
+    return this.http.get<UserRecord[]>(`${this.base}/settings/org/users`);
+  }
+  updateUserRole(userId: string, role: string): Observable<UserRecord> {
+    return this.http.patch<UserRecord>(
+      `${this.base}/settings/org/users/${userId}/role`,
+      { role },
+    );
+  }
+  suspendUser(userId: string): Observable<UserRecord> {
+    return this.http.post<UserRecord>(
+      `${this.base}/settings/org/users/${userId}/suspend`,
+      {},
+    );
+  }
+  reactivateUser(userId: string): Observable<UserRecord> {
+    return this.http.post<UserRecord>(
+      `${this.base}/settings/org/users/${userId}/reactivate`,
+      {},
+    );
+  }
+
+  // Exports
+  exportCsvUrl(module: string): string {
+    return `${this.base}/exports/${module}/csv`;
+  }
+  exportJson(module: string): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`${this.base}/exports/${module}/json`);
   }
 }
