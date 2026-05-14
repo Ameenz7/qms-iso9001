@@ -1,496 +1,192 @@
-export enum Role {
-  SUPER_ADMIN = 'super_admin',
-  ADMIN_OWNER = 'admin_owner',
-  QUALITY_MANAGER = 'quality_manager',
-  AUDITOR = 'auditor',
-  EMPLOYEE = 'employee',
-}
+export type Role =
+  | 'SUPER_ADMIN'
+  | 'ORG_ADMIN'
+  | 'QUALITY_MANAGER'
+  | 'AUDITOR'
+  | 'EMPLOYEE';
 
 export const ROLE_LABELS: Record<Role, string> = {
-  [Role.SUPER_ADMIN]: 'Super Admin',
-  [Role.ADMIN_OWNER]: 'Admin Owner',
-  [Role.QUALITY_MANAGER]: 'Quality Manager',
-  [Role.AUDITOR]: 'Auditor',
-  [Role.EMPLOYEE]: 'Employee',
+  SUPER_ADMIN: 'Super Admin',
+  ORG_ADMIN: 'Org Admin',
+  QUALITY_MANAGER: 'Quality Manager',
+  AUDITOR: 'Auditor',
+  EMPLOYEE: 'Employee',
 };
 
-export interface AuthUser {
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  createdBy: string;
+  createdAt: string;
+  logoUrl?: string;
+  timezone: string;
+}
+
+export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
   role: Role;
-  organizationId: string | null;
-}
-
-export interface LoginResponse {
-  user: AuthUser;
-}
-
-export enum OrganizationStatus {
-  ACTIVE = 'active',
-  GRACE = 'grace',
-  SUSPENDED = 'suspended',
-}
-
-export interface Organization {
-  id: string;
-  name: string;
-  description: string | null;
-  plan: string;
-  monthlyPrice: string;
-  paidUntil: string | null;
-  status: OrganizationStatus;
-  suspendedAt: string | null;
-  suspensionReason: string | null;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-}
-
-export interface Payment {
-  id: string;
-  organizationId: string;
-  amount: string;
-  monthsCovered: number;
-  paidAt: string;
-  coversUntil: string;
-  note: string | null;
-  recordedById: string | null;
-  createdAt: string;
-}
-
-export interface UserRecord extends AuthUser {
+  orgId: string | null;
   isActive: boolean;
+  avatarUrl?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
-export interface UserInvite {
+export interface Invitation {
   id: string;
   email: string;
+  orgId: string;
   role: Role;
-  organizationId: string | null;
+  token: string;
   expiresAt: string;
-  acceptedAt: string | null;
-  revokedAt: string | null;
-  invitedById: string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED';
+  invitedBy: string;
   createdAt: string;
 }
 
-export interface CreateInviteResponse {
-  invite: UserInvite;
-  acceptUrl: string;
-}
-
-export interface InviteVerifyResponse {
-  email: string;
-  role: Role;
-  organizationName: string | null;
-  expiresAt: string;
-}
-
-export enum NCSeverity {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
-}
-
-export enum NCStatus {
-  SUBMITTED = 'submitted',
-  UNDER_REVIEW = 'under_review',
-  UNDER_INVESTIGATION = 'under_investigation',
-  LINKED = 'linked',
-  CLOSED = 'closed',
-}
-
-export enum CAPAStatus {
-  OPEN = 'open',
-  IN_PROGRESS = 'in_progress',
-  PENDING_VALIDATION = 'pending_validation',
-  CLOSED = 'closed',
-  REOPENED = 'reopened',
-}
-
-export enum CapaSubtaskStatus {
-  TODO = 'todo',
-  IN_PROGRESS = 'in_progress',
-  DONE = 'done',
-}
-
-export enum DocumentStatus {
-  DRAFT = 'draft',
-  UNDER_REVIEW = 'under_review',
-  APPROVED = 'approved',
-  OBSOLETE = 'obsolete',
-}
-
-// Root Cause types
-export enum CauseType {
-  HUMAN = 'human',
-  PROCESS = 'process',
-  MATERIAL = 'material',
-  MACHINE = 'machine',
-  ENVIRONMENT = 'environment',
-  METHOD = 'method',
-}
-
-export enum VerificationStatus {
-  TO_VERIFY = 'to_verify',
-  CONFIRMED = 'confirmed',
-  UNCONFIRMED = 'unconfirmed',
-}
-
-export enum Likelihood {
-  HIGH = 'high',
-  MEDIUM = 'medium',
-  LOW = 'low',
-}
-
-export enum ActionType {
-  CORRECTIVE = 'corrective',
-  PREVENTIVE = 'preventive',
-}
-
-export enum ActionStatus {
-  PENDING = 'pending',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  OVERDUE = 'overdue',
-  VERIFIED = 'verified',
-}
-
-export enum ActionPriority {
-  HIGH = 'high',
-  MEDIUM = 'medium',
-  LOW = 'low',
-}
-
-// Audit types
-export enum AuditType {
-  INTERNAL = 'internal',
-  EXTERNAL = 'external',
-  SUPPLIER = 'supplier',
-}
-
-export enum AuditFrequency {
-  ONCE = 'once',
-  MONTHLY = 'monthly',
-  QUARTERLY = 'quarterly',
-  ANNUAL = 'annual',
-}
-
-export enum AuditStatus {
-  SCHEDULED = 'scheduled',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-}
-
-export enum FindingType {
-  CONFORM = 'conform',
-  MINOR_NC = 'minor_nc',
-  MAJOR_NC = 'major_nc',
-  OBSERVATION = 'observation',
-}
-
-export enum FindingSeverity {
-  MINOR = 'minor',
-  MAJOR = 'major',
-  CRITICAL = 'critical',
-}
-
-export enum FindingStatus {
-  OPEN = 'open',
-  CLOSED = 'closed',
-}
-
-export interface RootCause {
-  id: string;
-  organizationId: string;
-  ncId: string;
-  hypothesis: string;
-  causeType: CauseType;
-  verificationMethod: string | null;
-  verificationStatus: VerificationStatus;
-  verifiedById: string | null;
-  verifiedBy?: AuthUser | null;
-  verifiedAt: string | null;
-  likelihood: Likelihood;
-  isPrimary: boolean;
-  actions?: CorrectiveAction[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CorrectiveAction {
-  id: string;
-  organizationId: string;
-  rootCauseId: string | null;
-  rootCause?: RootCause | null;
-  ncId: string;
-  description: string;
-  actionType: ActionType;
-  assignedToId: string | null;
-  assignedTo?: AuthUser | null;
-  priority: ActionPriority;
-  dueDate: string | null;
-  status: ActionStatus;
-  completionDate: string | null;
-  effectivenessCheckRequired: boolean;
-  effectivenessVerified: boolean;
-  createdById: string;
-  createdBy?: AuthUser;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NonConformity {
-  id: string;
-  reference: string | null;
-  title: string;
-  description: string;
-  area?: string;
-  department?: string | null;
-  detectionMethod?: string | null;
-  severity: NCSeverity;
-  status: NCStatus;
-  submittedById: string;
-  submittedBy?: AuthUser;
-  assignedToId?: string | null;
-  assignedTo?: AuthUser | null;
-  capaId: string | null;
-  capa?: Capa | null;
-  closureDate?: string | null;
-  rootCauses?: RootCause[];
-  correctiveActions?: CorrectiveAction[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Capa {
-  id: string;
-  code: string;
-  title: string;
-  description: string;
-  rootCause: string | null;
-  correctiveAction: string | null;
-  preventiveAction: string | null;
-  verification: string | null;
-  status: CAPAStatus;
-  dueDate: string | null;
-  createdById: string;
-  assignedToId: string | null;
-  createdBy?: AuthUser;
-  assignedTo?: AuthUser | null;
-  validatedBy?: AuthUser | null;
-  validatedById: string | null;
-  validatedAt: string | null;
-  submittedForValidationAt: string | null;
-  closedAt: string | null;
-  fiveWhys: string[];
-  nonConformities?: NonConformity[];
-  subtasks?: CapaSubtask[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CapaSubtask {
-  id: string;
-  capaId: string;
-  organizationId: string;
-  title: string;
-  description: string | null;
-  status: CapaSubtaskStatus;
-  assigneeId: string | null;
-  assignee?: AuthUser | null;
-  dueDate: string | null;
-  completedAt: string | null;
-  completedById: string | null;
-  completedBy?: AuthUser | null;
-  createdById: string;
-  createdAt: string;
-  updatedAt: string;
-  capa?: Pick<Capa, 'id' | 'code' | 'title' | 'status'>;
-}
+export type DocumentStatus = 'DRAFT' | 'REVIEW' | 'APPROVED' | 'OBSOLETE';
 
 export interface DocumentVersion {
   id: string;
   documentId: string;
-  version: number;
-  content: string;
-  changeNote: string | null;
-  createdById: string;
-  createdBy?: AuthUser;
+  versionNumber: string;
+  filePath: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
   createdAt: string;
+  createdBy: string;
+}
+
+export interface DocumentMetadata {
+  key: string;
+  value: string;
 }
 
 export interface QmsDocument {
   id: string;
-  code: string;
   title: string;
-  content: string;
-  version: number;
+  type: string;
   status: DocumentStatus;
-  createdById: string;
-  createdBy?: AuthUser;
-  versions?: DocumentVersion[];
+  currentVersionId: string;
+  orgId: string;
+  createdBy: string;
   createdAt: string;
   updatedAt: string;
+  metadata: DocumentMetadata[];
+  versions: DocumentVersion[];
 }
 
-export interface DocumentAttachment {
+export type NcSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR';
+export type NcStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
+
+export interface RootCause {
   id: string;
-  documentId: string;
-  organizationId: string;
-  documentVersion: number;
-  filename: string;
-  mimeType: string;
-  size: string;
-  sha256: string;
-  storageKey: string;
-  uploadedById: string | null;
-  uploadedBy?: AuthUser | null;
+  ncId: string;
+  hypothesis: string;
+  causeType: 'PEOPLE' | 'PROCESS' | 'EQUIPMENT' | 'MATERIAL' | 'ENVIRONMENT' | 'METHOD';
+  isConfirmed: boolean;
   createdAt: string;
 }
 
-export interface DocumentShare {
+export type ActionStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE';
+
+export interface CorrectiveAction {
   id: string;
-  documentId: string;
-  organizationId: string;
-  expiresAt: string;
-  revokedAt: string | null;
-  label: string | null;
-  createdById: string | null;
+  ncId: string;
+  causeId?: string;
+  description: string;
+  assignedTo: string;
+  dueDate: string;
+  status: ActionStatus;
+  completedAt?: string;
   createdAt: string;
 }
 
-export interface CreateShareResponse {
-  share: DocumentShare;
-  shareUrl: string;
-}
-
-export interface PublicShareView {
-  share: {
-    id: string;
-    label: string | null;
-    expiresAt: string;
-    createdAt: string;
-  };
-  organization: { name: string };
-  document: {
-    id: string;
-    code: string;
-    title: string;
-    content: string;
-    version: number;
-    status: string;
-    updatedAt: string;
-  };
-  attachments: Array<{
-    id: string;
-    filename: string;
-    mimeType: string;
-    size: string;
-    sha256: string;
-    documentVersion: number;
-    createdAt: string;
-  }>;
-}
-
-export interface AuditLog {
+export interface NonConformity {
   id: string;
-  userId: string | null;
-  user?: AuthUser | null;
-  organizationId: string | null;
-  action: string;
-  entity: string;
-  entityId: string;
-  metadata: Record<string, unknown> | null;
-  oldValues: Record<string, unknown> | null;
-  newValues: Record<string, unknown> | null;
-  ipAddress: string | null;
-  userAgent: string | null;
-  hashChain: string | null;
+  reference: string;
+  title: string;
+  description: string;
+  severity: NcSeverity;
+  status: NcStatus;
+  assignedTo: string | null;
+  reportedBy: string;
+  orgId: string;
   createdAt: string;
+  updatedAt: string;
+  closedAt?: string;
+  rootCauses: RootCause[];
+  actions: CorrectiveAction[];
 }
 
-// Audit Schedule types
+export type AuditStatus = 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED';
+export type AuditType = 'INTERNAL' | 'EXTERNAL' | 'SUPPLIER';
+
 export interface AuditChecklistItem {
   id: string;
-  organizationId: string;
   auditId: string;
-  itemNumber: number;
-  requirement: string;
-  evidenceRequired: boolean;
-  findingType: FindingType | null;
-  findingDescription: string | null;
-  correctiveActionRequired: boolean;
-  createdAt: string;
-  updatedAt: string;
+  item: string;
+  finding: string;
+  evidence: string;
+  conformity: 'CONFORM' | 'NON_CONFORM' | 'NA' | null;
 }
 
 export interface AuditFinding {
   id: string;
-  organizationId: string;
   auditId: string;
   description: string;
-  severity: FindingSeverity;
-  category: string | null;
-  referenceNcId: string | null;
-  status: FindingStatus;
-  closedById: string | null;
-  closedBy?: AuthUser | null;
-  closedDate: string | null;
+  severity: NcSeverity;
+  ncId?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
-export interface AuditSchedule {
+export interface Audit {
   id: string;
-  organizationId: string;
+  title: string;
   type: AuditType;
-  title: string;
-  frequency: AuditFrequency;
-  plannedDate: string;
-  scope: string | null;
-  auditorId: string | null;
-  auditor?: AuthUser | null;
-  auditeeId: string | null;
-  auditee?: AuthUser | null;
+  scheduledDate: string;
+  auditorId: string;
   status: AuditStatus;
-  completionDate: string | null;
-  createdById: string;
-  createdBy?: AuthUser;
-  checklistItems?: AuditChecklistItem[];
-  findings?: AuditFinding[];
+  orgId: string;
+  scope: string;
   createdAt: string;
-  updatedAt: string;
+  checklist: AuditChecklistItem[];
+  findings: AuditFinding[];
 }
 
-// Dashboard types
-export interface DashboardKpis {
-  nc: { total: number; open: number; closedThisMonth: number; critical: number };
-  capa: { total: number; open: number };
-  documents: { total: number; draft: number; approved: number };
-  audits: { scheduled: number; completed: number };
-  actions: { total: number; pending: number; overdue: number };
-}
-
-export interface DashboardTask {
+export interface AuditLog {
   id: string;
-  type: 'subtask' | 'action';
-  title: string;
-  status: string;
-  dueDate: string | null;
-  reference: string | null;
-  link: string | null;
+  userId: string;
+  userName: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  details: string;
+  timestamp: string;
 }
 
-export interface ChartData {
-  ncTrend: Array<{ month: string; count: number }>;
-  ncByDepartment: Array<{ department: string; count: number }>;
-  actionsByStatus: Array<{ status: string; count: number }>;
-  docsByStatus: Array<{ status: string; count: number }>;
+export interface DashboardStats {
+  ncOpen: number;
+  ncInProgress: number;
+  ncClosed: number;
+  docsDraft: number;
+  docsReview: number;
+  docsApproved: number;
+  auditsPlanned: number;
+  auditsCompleted: number;
+  actionsPending: number;
+  actionsOverdue: number;
+}
+
+export interface TaskItem {
+  id: string;
+  kind: 'NC' | 'ACTION' | 'AUDIT' | 'DOCUMENT';
+  title: string;
+  link: string;
+  dueDate?: string;
+  status: string;
 }

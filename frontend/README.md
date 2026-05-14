@@ -1,27 +1,54 @@
-# Frontend
+# QMS Frontend — Mock Mode
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.21.
+Angular 18 standalone app with **in-memory mock services only** (no backend
+required). The real backend will be implemented in a follow-up.
 
-## Development server
+## Quick start
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+```bash
+npm install
+npm start
+# open http://localhost:4200
+```
 
-## Code scaffolding
+## Login
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+All seeded users share the password `password`. Pick a role:
 
-## Build
+| Email                 | Role             |
+|-----------------------|------------------|
+| `super@qms.com`       | Super Admin      |
+| `admin@demo.com`      | Org Admin        |
+| `qm@demo.com`         | Quality Manager  |
+| `auditor@demo.com`    | Auditor          |
+| `employee@demo.com`   | Employee         |
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+You can also switch roles on the fly via the **Demo role** dropdown in the top
+bar — handy to test RBAC without re-logging in.
 
-## Running unit tests
+## Modules
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+- **Dashboard** — KPIs, charts (Chart.js), my tasks
+- **Documents** — Upload + auto-versioning (1.0 → 1.1 → …) + metadata + preview
+- **Non-Conformities** — Reporting, root cause analysis, corrective actions, close workflow
+- **Audits** — Plan, checklist, findings, status transitions
+- **Settings** — Profile, organization, users (invite, role change, enable/disable), roles reference
+- **Audit Trail** — Immutable log of CRUD events (Super Admin / Org Admin only)
+- **Organizations** — Super Admin creates orgs + invites Org Admins
+- **Invitations** — Token-based via `/register/:token`
 
-## Running end-to-end tests
+## What's mocked
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+- Auth is a simple email/password match against `seedUsers`. JWT is **not** issued.
+- Email delivery (Resend) is replaced with a `console.info(...)` of the invite link.
+- File uploads only store filename/size/MIME — bytes are never persisted.
+- Data is held in Angular signals (`DataStore`) and persists for the lifetime of
+  the page. Reloading the page resets the data to the seed state (except the
+  currently logged-in user, which is in `localStorage`).
 
-## Further help
+## Tech stack
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Angular 18 standalone components + signals
+- Angular Material (Indigo/Pink theme)
+- Chart.js (auto registration)
+- TypeScript strict mode

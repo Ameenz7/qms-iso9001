@@ -1,61 +1,103 @@
-import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, catchError, firstValueFrom, of, tap } from 'rxjs';
-import { environment } from '../../environments/environment';
-import { AuthUser, LoginResponse, Role } from './models';
+import { inject } from '@angular/core';
+import { Observable, of, delay } from 'rxjs';
+import { Role, User } from './models';
+import { seedUsers } from './mock-data';
 
+const STORAGE_KEY = 'qms.auth.user';
+
+/**
+ * Mock auth — no real backend. Login matches a seeded user by email.
+ * Password is "password" for everyone, or you can use the role-switcher in the topbar.
+ */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private http = inject(HttpClient);
   private router = inject(Router);
 
-  readonly user = signal<AuthUser | null>(null);
-  readonly ready = signal<boolean>(false);
+  private users: User[] = [...seedUsers];
+
+  readonly user = signal<User | null>(this.loadFromStorage());
   readonly isAuthenticated = computed(() => !!this.user());
 
-  /**
-   * Bootstraps the auth state on app start. Hits `/auth/me` — if the httpOnly
-   * cookie is valid the backend returns the user; otherwise a 401 leaves us
-   * anonymous. Also primes the XSRF-TOKEN cookie.
-   */
-  async bootstrap(): Promise<void> {
-    await firstValueFrom(
-      this.http.get(`${environment.apiUrl}/auth/csrf-token`).pipe(
-        catchError(() => of(null)),
-      ),
-    );
-    const me = await firstValueFrom(
-      this.http
-        .get<AuthUser>(`${environment.apiUrl}/auth/me`)
-        .pipe(catchError(() => of(null as AuthUser | null))),
-    );
-    this.user.set(me);
-    this.ready.set(true);
+  private loadFromStorage(): User | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as User) : null;
+    } catch {
+      return null;
+    }
   }
 
-  login(email: string, password: string): Observable<LoginResponse> {
-    return this.http
-      .post<LoginResponse>(`${environment.apiUrl}/auth/login`, {
-        email,
-        password,
-      })
-      .pipe(
-        tap((res) => {
-          this.user.set(res.user);
-        }),
-      );
+  private saveToStorage(user: User | null): void {
+    if (user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+
+  login(email: string, password: string): Observable<User> {
+    return new Observable<User>((observer) => {
+      setTimeout(() => {
+        const found = this.users.find(
+          (u) => u.email.toLowerCase() === email.toLowerCase() && u.isActive,
+        );
+        if (!found) {
+          observer.error(new Error('Invalid credentials'));
+          return;
+        }
+        if (password !== 'password') {
+          observer.error(new Error('Invalid credentials'));
+          return;
+        }
+        this.user.set(found);
+        this.saveToStorage(found);
+        observer.next(found);
+        observer.complete();
+      }, 300);
+    });
+  }
+
+  register(
+    token: string,
+    payload: {
+      firstName: string;
+      lastName: string;
+      password: string;
+    },
+  ): Observable<User> {
+    return of({
+      id: `user-${Date.now()}`,
+      email: `${payload.firstName.toLowerCase()}@demo.com`,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      role: 'EMPLOYEE' as Role,
+      orgId: 'org-1',
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    }).pipe(delay(400));
+  }
+
+  forgotPassword(email: string): Observable<{ message: string }> {
+    return of({
+      message: `If an account exists for ${email}, we sent a reset link.`,
+    }).pipe(delay(400));
   }
 
   logout(): void {
-    this.http
-      .post(`${environment.apiUrl}/auth/logout`, {})
-      .subscribe({ complete: () => this.afterLogout() });
+    this.user.set(null);
+    this.saveToStorage(null);
+    void this.router.navigate(['/login']);
   }
 
-  private afterLogout(): void {
-    this.user.set(null);
-    void this.router.navigate(['/login']);
+  /** Demo helper: switch the active user role without re-logging in. */
+  switchRole(role: Role): void {
+    const candidate = this.users.find((u) => u.role === role && u.isActive);
+    if (candidate) {
+      this.user.set(candidate);
+      this.saveToStorage(candidate);
+    }
   }
 
   hasRole(...roles: Role[]): boolean {

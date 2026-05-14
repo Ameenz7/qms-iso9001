@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
@@ -16,97 +19,86 @@ import { AuthService } from '../../core/auth.service';
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    RouterLink,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
   ],
   template: `
-    <div class="login-wrapper">
-      <mat-card class="login-card">
+    <div class="auth-bg">
+      <mat-card class="auth-card">
         <mat-card-header>
-          <mat-card-title>
+          <div class="brand">
             <mat-icon>verified</mat-icon>
-            QMS ISO 9001
-          </mat-card-title>
-          <mat-card-subtitle>Sign in to continue</mat-card-subtitle>
+            <span>QMS ISO 9001</span>
+          </div>
+          <mat-card-title>Sign in</mat-card-title>
+          <mat-card-subtitle>Welcome back to your quality workspace</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <form [formGroup]="form" (ngSubmit)="submit()">
-            <mat-form-field appearance="outline" class="full">
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <mat-form-field appearance="outline" class="full-width">
               <mat-label>Email</mat-label>
-              <input matInput formControlName="email" type="email" required />
+              <input matInput type="email" formControlName="email" autocomplete="email" />
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full">
+            <mat-form-field appearance="outline" class="full-width">
               <mat-label>Password</mat-label>
-              <input
-                matInput
-                formControlName="password"
-                type="password"
-                required />
+              <input matInput type="password" formControlName="password" autocomplete="current-password" />
+              <mat-hint>Demo password: <code>password</code></mat-hint>
             </mat-form-field>
-            <div class="error" *ngIf="error()">{{ error() }}</div>
-            <button
-              mat-flat-button
-              color="primary"
-              class="full"
-              type="submit"
-              [disabled]="form.invalid || loading()">
-              <mat-progress-spinner
-                *ngIf="loading()"
-                diameter="18"
-                mode="indeterminate" />
-              <span *ngIf="!loading()">Sign in</span>
+            <p *ngIf="error()" class="error">{{ error() }}</p>
+            <button mat-raised-button color="primary" type="submit" class="full-width" [disabled]="loading()">
+              {{ loading() ? 'Signing in…' : 'Sign in' }}
             </button>
           </form>
-          <p class="hint">
-            Default super admin: <code>admin&#64;qms.local</code> /
-            <code>admin123</code>
-          </p>
+          <div class="links">
+            <a routerLink="/forgot-password">Forgot password?</a>
+          </div>
+          <div class="demo">
+            <strong>Try a role:</strong>
+            <button mat-stroked-button *ngFor="let d of demoAccounts" (click)="fill(d.email)">
+              {{ d.label }}
+            </button>
+          </div>
         </mat-card-content>
       </mat-card>
     </div>
   `,
   styles: [
     `
-      .login-wrapper {
+      .auth-bg {
+        min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 100vh;
-        background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
         padding: 16px;
       }
-      .login-card {
-        width: 100%;
-        max-width: 420px;
-        padding: 8px;
-      }
-      mat-card-title {
+      .auth-card { width: 100%; max-width: 420px; padding: 8px 12px; }
+      .brand {
         display: flex;
-        align-items: center;
         gap: 8px;
+        align-items: center;
+        font-weight: 600;
+        color: #4f46e5;
+        margin-bottom: 4px;
       }
-      .full {
-        width: 100%;
-      }
-      form {
+      .full-width { width: 100%; }
+      .error { color: #b91c1c; margin: 4px 0 12px; }
+      .links { margin-top: 12px; text-align: center; }
+      .links a { color: #4f46e5; text-decoration: none; }
+      .demo {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
         display: flex;
         flex-direction: column;
         gap: 8px;
-        margin-top: 8px;
-      }
-      .error {
-        color: #b91c1c;
-        margin: 4px 0 8px;
         font-size: 13px;
-      }
-      .hint {
-        margin-top: 16px;
-        font-size: 12px;
-        color: #64748b;
+
+        button { margin-top: 4px; }
       }
     `,
   ],
@@ -116,31 +108,39 @@ export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
 
+  form = this.fb.nonNullable.group({
+    email: ['super@qms.com', [Validators.required, Validators.email]],
+    password: ['password', [Validators.required]],
+  });
+
   loading = signal(false);
   error = signal<string | null>(null);
 
-  form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
-  });
+  demoAccounts = [
+    { label: 'Super Admin', email: 'super@qms.com' },
+    { label: 'Org Admin', email: 'admin@demo.com' },
+    { label: 'Quality Manager', email: 'qm@demo.com' },
+    { label: 'Auditor', email: 'auditor@demo.com' },
+    { label: 'Employee', email: 'employee@demo.com' },
+  ];
 
-  submit(): void {
+  fill(email: string): void {
+    this.form.patchValue({ email });
+  }
+
+  onSubmit(): void {
     if (this.form.invalid) return;
     this.loading.set(true);
     this.error.set(null);
     const { email, password } = this.form.getRawValue();
     this.auth.login(email, password).subscribe({
-      next: (res) => {
+      next: () => {
         this.loading.set(false);
-        const landing =
-          res.user.role === 'super_admin' ? '/organizations' : '/dashboard';
-        void this.router.navigate([landing]);
+        void this.router.navigate(['/dashboard']);
       },
-      error: (err) => {
+      error: (err: Error) => {
         this.loading.set(false);
-        this.error.set(
-          err?.error?.message || 'Invalid credentials. Please try again.',
-        );
+        this.error.set(err.message);
       },
     });
   }

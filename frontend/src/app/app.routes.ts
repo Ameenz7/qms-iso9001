@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { authGuard, roleGuard } from './core/guards';
-import { Role } from './core/models';
 
 export const routes: Routes = [
   {
@@ -9,17 +8,17 @@ export const routes: Routes = [
       import('./features/auth/login.component').then((m) => m.LoginComponent),
   },
   {
-    path: 'accept-invite',
+    path: 'forgot-password',
     loadComponent: () =>
-      import('./features/auth/accept-invite.component').then(
-        (m) => m.AcceptInviteComponent,
+      import('./features/auth/forgot-password.component').then(
+        (m) => m.ForgotPasswordComponent,
       ),
   },
   {
-    path: 'shared/:token',
+    path: 'register/:token',
     loadComponent: () =>
-      import('./features/shared-document/shared-document.component').then(
-        (m) => m.SharedDocumentComponent,
+      import('./features/auth/register.component').then(
+        (m) => m.RegisterComponent,
       ),
   },
   {
@@ -33,14 +32,6 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'dashboard',
-        canActivate: [
-          roleGuard(
-            Role.ADMIN_OWNER,
-            Role.QUALITY_MANAGER,
-            Role.AUDITOR,
-            Role.EMPLOYEE,
-          ),
-        ],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent,
@@ -48,90 +39,59 @@ export const routes: Routes = [
       },
       {
         path: 'organizations',
-        canActivate: [roleGuard(Role.SUPER_ADMIN)],
+        canActivate: [roleGuard('SUPER_ADMIN')],
         loadComponent: () =>
-          import('./features/organizations/organizations.component').then(
+          import('./features/invitations/organizations.component').then(
             (m) => m.OrganizationsComponent,
           ),
       },
       {
-        path: 'users',
-        canActivate: [roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)],
-        loadComponent: () =>
-          import('./features/users/users.component').then(
-            (m) => m.UsersComponent,
-          ),
-      },
-      {
-        path: 'non-conformities',
-        canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
-        ],
-        loadComponent: () =>
-          import(
-            './features/non-conformities/non-conformities.component'
-          ).then((m) => m.NonConformitiesComponent),
-      },
-      {
-        path: 'non-conformities/:id',
-        canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
-        ],
-        loadComponent: () =>
-          import(
-            './features/non-conformities/nc-detail.component'
-          ).then((m) => m.NcDetailComponent),
-      },
-      {
-        path: 'capas',
-        canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
-        ],
-        loadComponent: () =>
-          import('./features/capas/capas.component').then(
-            (m) => m.CapasComponent,
-          ),
-      },
-      {
-        path: 'capas/:id',
-        canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
-        ],
-        loadComponent: () =>
-          import('./features/capas/capa-detail.component').then(
-            (m) => m.CapaDetailComponent,
-          ),
-      },
-      {
         path: 'documents',
-        canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
-        ],
         loadComponent: () =>
           import('./features/documents/documents.component').then(
             (m) => m.DocumentsComponent,
           ),
       },
       {
-        path: 'audit-logs',
-        canActivate: [roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER)],
+        path: 'nc',
         loadComponent: () =>
-          import('./features/audit/audit.component').then(
-            (m) => m.AuditComponent,
+          import('./features/nc/nc-list.component').then(
+            (m) => m.NcListComponent,
+          ),
+      },
+      {
+        path: 'nc/:id',
+        loadComponent: () =>
+          import('./features/nc/nc-detail.component').then(
+            (m) => m.NcDetailComponent,
           ),
       },
       {
         path: 'audits',
         canActivate: [
-          roleGuard(
-            Role.ADMIN_OWNER,
-            Role.QUALITY_MANAGER,
-            Role.AUDITOR,
-          ),
+          roleGuard('SUPER_ADMIN', 'ORG_ADMIN', 'QUALITY_MANAGER', 'AUDITOR'),
         ],
         loadComponent: () =>
-          import('./features/audits/audits.component').then(
-            (m) => m.AuditsComponent,
+          import('./features/audits/audits-list.component').then(
+            (m) => m.AuditsListComponent,
+          ),
+      },
+      {
+        path: 'audits/:id',
+        canActivate: [
+          roleGuard('SUPER_ADMIN', 'ORG_ADMIN', 'QUALITY_MANAGER', 'AUDITOR'),
+        ],
+        loadComponent: () =>
+          import('./features/audits/audit-detail.component').then(
+            (m) => m.AuditDetailComponent,
+          ),
+      },
+      {
+        path: 'audit-trail',
+        canActivate: [roleGuard('SUPER_ADMIN', 'ORG_ADMIN')],
+        loadComponent: () =>
+          import('./features/audit-trail/audit-trail.component').then(
+            (m) => m.AuditTrailComponent,
           ),
       },
       {
