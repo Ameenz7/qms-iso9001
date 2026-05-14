@@ -17,9 +17,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../core/auth.service';
 import { DocumentsService } from '../../core/documents.service';
-import { DocumentStatus, QmsDocument } from '../../core/models';
+import { DocumentStatus, DocumentVersion, QmsDocument } from '../../core/models';
 
 @Component({
   selector: 'app-doc-upload-dialog',
@@ -57,7 +58,10 @@ import { DocumentStatus, QmsDocument } from '../../core/models';
         <div *ngIf="file"><strong>{{ file.name }}</strong> ({{ (file.size / 1024) | number: '1.0-1' }} KB)</div>
         <input #fileInput hidden type="file" (change)="onFile($event)" />
       </div>
-      <p class="hint">In mock mode the file is not actually uploaded — only metadata is stored.</p>
+      <p class="hint">
+        In mock mode the file is held in memory via a blob URL — preview &amp;
+        download work for the rest of this session.
+      </p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
@@ -103,9 +107,7 @@ export class DocUploadDialogComponent {
     this.ref.close({
       title: this.title,
       type: this.type,
-      fileName: this.file.name,
-      fileSize: this.file.size,
-      mimeType: this.file.type || 'application/octet-stream',
+      file: this.file,
     });
   }
 }
@@ -119,6 +121,7 @@ export class DocUploadDialogComponent {
     MatButtonModule,
     MatIconModule,
     MatTableModule,
+    MatTooltipModule,
   ],
   template: `
     <h2 mat-dialog-title>{{ data.doc.title }}</h2>
@@ -126,18 +129,37 @@ export class DocUploadDialogComponent {
       <div class="meta-row">
         <span class="chip-{{ data.doc.status.toLowerCase() }}">{{ data.doc.status }}</span>
         <span class="dim">Type: {{ data.doc.type }}</span>
-        <span class="dim">Current: v{{ currentVersion().versionNumber }}</span>
+        <span class="dim">
+          Previewing: v{{ previewVersion().versionNumber }} ·
+          {{ previewVersion().fileName }}
+        </span>
       </div>
 
-      <div class="preview">
-        <mat-icon>picture_as_pdf</mat-icon>
-        <div>
-          <div><strong>{{ currentVersion().fileName }}</strong></div>
-          <small>{{ (currentVersion().fileSize / 1024) | number: '1.0-1' }} KB · {{ currentVersion().mimeType }}</small>
+      <div class="preview-frame" [ngSwitch]="previewKind()">
+        <iframe
+          *ngSwitchCase="'pdf'"
+          [src]="previewSafeUrl()"
+          title="Document preview"
+        ></iframe>
+        <img
+          *ngSwitchCase="'image'"
+          [src]="previewUrl()"
+          alt="Document preview"
+        />
+        <pre *ngSwitchCase="'text'">{{ textPreview() }}</pre>
+        <div *ngSwitchDefault class="no-preview">
+          <mat-icon>insert_drive_file</mat-icon>
+          <div>
+            <strong>No inline preview available</strong>
+            <div class="dim">
+              {{ previewVersion().mimeType || 'unknown type' }} ·
+              {{ (previewVersion().fileSize / 1024) | number: '1.0-1' }} KB
+            </div>
+          </div>
+          <button mat-stroked-button class="ml-auto" (click)="download(previewVersion())">
+            <mat-icon>download</mat-icon> Download to inspect
+          </button>
         </div>
-        <button mat-stroked-button class="ml-auto" disabled>
-          <mat-icon>download</mat-icon> Download (mock)
-        </button>
       </div>
 
       <h3>Metadata</h3>
@@ -155,7 +177,14 @@ export class DocUploadDialogComponent {
       <table mat-table [dataSource]="data.doc.versions" class="full-width">
         <ng-container matColumnDef="ver">
           <th mat-header-cell *matHeaderCellDef>Version</th>
-          <td mat-cell *matCellDef="let v">v{{ v.versionNumber }}</td>
+          <td mat-cell *matCellDef="let v">
+            v{{ v.versionNumber }}
+            <span *ngIf="v.id === data.doc.currentVersionId" class="badge current">current</span>
+            <span
+              *ngIf="v.id !== data.doc.currentVersionId"
+              class="badge obsolete"
+            >obsolete</span>
+          </td>
         </ng-container>
         <ng-container matColumnDef="file">
           <th mat-header-cell *matHeaderCellDef>File</th>
@@ -169,11 +198,33 @@ export class DocUploadDialogComponent {
           <th mat-header-cell *matHeaderCellDef>Size</th>
           <td mat-cell *matCellDef="let v">{{ (v.fileSize / 1024) | number: '1.0-1' }} KB</td>
         </ng-container>
-        <tr mat-header-row *matHeaderRowDef="['ver','file','date','size']"></tr>
-        <tr mat-row *matRowDef="let row; columns: ['ver','file','date','size']"></tr>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-col">Actions</th>
+          <td mat-cell *matCellDef="let v" class="actions-col">
+            <button
+              mat-icon-button
+              matTooltip="Preview this version"
+              (click)="preview(v)"
+            >
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              matTooltip="Download this version"
+              (click)="download(v)"
+            >
+              <mat-icon>download</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="['ver','file','date','size','actions']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['ver','file','date','size','actions']"></tr>
       </table>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
+      <button mat-stroked-button (click)="download(previewVersion())">
+        <mat-icon>download</mat-icon> Download current
+      </button>
       <button mat-button mat-dialog-close>Close</button>
     </mat-dialog-actions>
   `,
@@ -186,15 +237,45 @@ export class DocUploadDialogComponent {
         margin-bottom: 16px;
       }
       .dim { color: #6b7280; font-size: 13px; }
-      .preview {
-        background: #f3f4f6;
-        padding: 12px 16px;
-        border-radius: 6px;
+      .preview-frame {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f9fafb;
+        margin-bottom: 16px;
+        height: 360px;
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+      }
+      .preview-frame iframe {
+        border: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .preview-frame img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        margin: auto;
+      }
+      .preview-frame pre {
+        margin: 0;
+        padding: 16px;
+        overflow: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        background: #ffffff;
+        width: 100%;
+      }
+      .no-preview {
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-bottom: 16px;
-        mat-icon { color: #ef4444; }
+        padding: 16px;
+        width: 100%;
+        mat-icon { color: #6366f1; font-size: 36px; height: 36px; width: 36px; }
       }
       .ml-auto { margin-left: auto; }
       table.meta {
@@ -204,14 +285,84 @@ export class DocUploadDialogComponent {
         td:first-child { color: #6b7280; width: 40%; }
       }
       h3 { font-size: 14px; margin: 16px 0 8px; }
+      .badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .badge.current {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+      .badge.obsolete {
+        background: #f3f4f6;
+        color: #6b7280;
+      }
+      .actions-col { width: 120px; text-align: right; }
     `,
   ],
 })
 export class DocDetailDialogComponent {
   data = inject(MAT_DIALOG_DATA) as { doc: QmsDocument };
-  currentVersion = () =>
-    this.data.doc.versions.find((v) => v.id === this.data.doc.currentVersionId) ??
-    this.data.doc.versions[this.data.doc.versions.length - 1];
+  private docs = inject(DocumentsService);
+  private sanitizer = inject(DomSanitizer);
+
+  previewVersion = signal<DocumentVersion>(this.initialVersion());
+  previewUrl = signal<string>('');
+  previewSafeUrl = signal<SafeResourceUrl | null>(null);
+  previewKind = signal<'pdf' | 'image' | 'text' | 'other'>('other');
+  textPreview = signal<string>('');
+
+  constructor() {
+    this.preview(this.initialVersion());
+  }
+
+  private initialVersion(): DocumentVersion {
+    return (
+      this.data.doc.versions.find(
+        (v) => v.id === this.data.doc.currentVersionId,
+      ) ?? this.data.doc.versions[this.data.doc.versions.length - 1]
+    );
+  }
+
+  preview(v: DocumentVersion): void {
+    const url = this.docs.resolveFileUrl(v);
+    this.previewVersion.set(v);
+    this.previewUrl.set(url);
+    this.previewSafeUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
+    const mime = (v.mimeType || '').toLowerCase();
+    if (mime === 'application/pdf') {
+      this.previewKind.set('pdf');
+      this.textPreview.set('');
+    } else if (mime.startsWith('image/')) {
+      this.previewKind.set('image');
+      this.textPreview.set('');
+    } else if (
+      mime.startsWith('text/') ||
+      mime === 'application/json' ||
+      mime === 'application/xml' ||
+      !v.fileUrl // synthesised placeholder is plain text
+    ) {
+      this.previewKind.set('text');
+      fetch(url)
+        .then((r) => r.text())
+        .then((t) =>
+          this.textPreview.set(t.length > 4000 ? t.slice(0, 4000) + '\n\n… (truncated)' : t),
+        )
+        .catch(() => this.textPreview.set('Unable to read file.'));
+    } else {
+      this.previewKind.set('other');
+      this.textPreview.set('');
+    }
+  }
+
+  download(v: DocumentVersion): void {
+    this.docs.download(v);
+  }
 }
 
 @Component({
@@ -363,28 +514,20 @@ export class DocumentsComponent implements OnInit {
     ref.afterClosed().subscribe((payload) => {
       if (!payload) return;
       if (doc) {
-        this.docsService
-          .uploadVersion(doc.id, {
-            fileName: payload.fileName,
-            fileSize: payload.fileSize,
-            mimeType: payload.mimeType,
-          })
-          .subscribe(() => {
-            this.snack.open(
-              `New version uploaded for "${doc.title}"`,
-              'Dismiss',
-              { duration: 3000 },
-            );
-            this.refresh();
-          });
+        this.docsService.uploadVersion(doc.id, payload.file).subscribe(() => {
+          this.snack.open(
+            `New version uploaded for "${doc.title}"`,
+            'Dismiss',
+            { duration: 3000 },
+          );
+          this.refresh();
+        });
       } else {
         this.docsService
           .create({
             title: payload.title,
             type: payload.type,
-            fileName: payload.fileName,
-            fileSize: payload.fileSize,
-            mimeType: payload.mimeType,
+            file: payload.file,
             metadata: [],
           })
           .subscribe(() => {

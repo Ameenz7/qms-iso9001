@@ -59,6 +59,12 @@ export interface DocumentVersion {
   mimeType: string;
   createdAt: string;
   createdBy: string;
+  /**
+   * Blob/data URL for preview & download. Populated by the upload flow via
+   * `URL.createObjectURL()` for real File objects. Seed versions leave this
+   * empty and the documents service synthesises a placeholder blob on demand.
+   */
+  fileUrl?: string;
 }
 
 export interface DocumentMetadata {
