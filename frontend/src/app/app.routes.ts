@@ -34,7 +34,12 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
+          roleGuard(
+            Role.ADMIN_OWNER,
+            Role.QUALITY_MANAGER,
+            Role.AUDITOR,
+            Role.EMPLOYEE,
+          ),
         ],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then(
@@ -66,6 +71,16 @@ export const routes: Routes = [
           import(
             './features/non-conformities/non-conformities.component'
           ).then((m) => m.NonConformitiesComponent),
+      },
+      {
+        path: 'non-conformities/:id',
+        canActivate: [
+          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
+        ],
+        loadComponent: () =>
+          import(
+            './features/non-conformities/nc-detail.component'
+          ).then((m) => m.NcDetailComponent),
       },
       {
         path: 'capas',
@@ -103,6 +118,27 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/audit/audit.component').then(
             (m) => m.AuditComponent,
+          ),
+      },
+      {
+        path: 'audits',
+        canActivate: [
+          roleGuard(
+            Role.ADMIN_OWNER,
+            Role.QUALITY_MANAGER,
+            Role.AUDITOR,
+          ),
+        ],
+        loadComponent: () =>
+          import('./features/audits/audits.component').then(
+            (m) => m.AuditsComponent,
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/settings.component').then(
+            (m) => m.SettingsComponent,
           ),
       },
     ],

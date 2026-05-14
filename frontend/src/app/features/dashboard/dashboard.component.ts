@@ -14,6 +14,7 @@ import {
   CAPAStatus,
   CapaSubtask,
   CapaSubtaskStatus,
+  DashboardKpis,
   ROLE_LABELS,
   Role,
 } from '../../core/models';
@@ -70,6 +71,20 @@ import {
         <div>
           <div class="num">{{ stats().documents }}</div>
           <div class="label">Documents</div>
+        </div>
+      </mat-card>
+      <mat-card class="stat" *ngIf="canSeeQms">
+        <mat-icon>fact_check</mat-icon>
+        <div>
+          <div class="num">{{ kpis()?.audits?.scheduled ?? 0 }}</div>
+          <div class="label">Scheduled Audits</div>
+        </div>
+      </mat-card>
+      <mat-card class="stat" *ngIf="canSeeQms">
+        <mat-icon>assignment</mat-icon>
+        <div>
+          <div class="num">{{ kpis()?.actions?.overdue ?? 0 }}</div>
+          <div class="label overdue">Overdue Actions</div>
         </div>
       </mat-card>
     </div>
@@ -259,6 +274,7 @@ export class DashboardComponent {
 
   user = this.auth.user;
   myTasks = signal<CapaSubtask[]>([]);
+  kpis = signal<DashboardKpis | null>(null);
 
   stats = signal({
     organizations: 0,
@@ -287,6 +303,7 @@ export class DashboardComponent {
     return this.auth.hasRole(
       Role.ADMIN_OWNER,
       Role.QUALITY_MANAGER,
+      Role.AUDITOR,
       Role.EMPLOYEE,
     );
   }
@@ -320,6 +337,10 @@ export class DashboardComponent {
 
     if (this.canSeeQms) {
       this.loadMyTasks();
+      this.api
+        .getDashboardKpis()
+        .pipe(catchError(() => of(null)))
+        .subscribe((k) => { if (k) this.kpis.set(k); });
     }
   }
 

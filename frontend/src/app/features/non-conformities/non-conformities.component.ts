@@ -255,7 +255,7 @@ export class NcLinkDialogComponent {
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="cols"></tr>
-        <tr mat-row *matRowDef="let row; columns: cols"></tr>
+        <tr mat-row *matRowDef="let row; columns: cols" class="clickable" (click)="openDetail(row)"></tr>
       </table>
       <p class="empty" *ngIf="!ncs().length">No non-conformities yet.</p>
     </mat-card>
@@ -281,6 +281,12 @@ export class NcLinkDialogComponent {
       .empty {
         padding: 16px;
         color: var(--notion-text-muted);
+      }
+      .clickable {
+        cursor: pointer;
+      }
+      .clickable:hover {
+        background: #f1f5f9;
       }
     `,
   ],
@@ -386,6 +392,10 @@ export class NonConformitiesComponent {
         },
       });
     });
+  }
+
+  openDetail(nc: NonConformity) {
+    this.router.navigate(['/non-conformities', nc.id]);
   }
 
   promote(nc: NonConformity) {
