@@ -24,8 +24,8 @@ services:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
     ports:
-      - "9000:9000"  # S3 API
-      - "9001:9001"  # Web console
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
     volumes:
       - qms_minio:/data
     healthcheck:
@@ -62,7 +62,7 @@ services:
       SUPER_ADMIN_EMAIL: admin@qms.local
       SUPER_ADMIN_PASSWORD: admin123
       CORS_ORIGIN: http://localhost:4200
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-re_MdivBHKR_FbKNQ35S2DBb726YSRkRDQJ7}
       MAIL_FROM: ${MAIL_FROM:-QMS <onboarding@resend.dev>}
       APP_URL: ${APP_URL:-http://localhost:4200}
       # Storage — MinIO by default in Docker; set STORAGE_DRIVER=local to
