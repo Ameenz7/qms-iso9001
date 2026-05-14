@@ -20,7 +20,7 @@ export class NonConformity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   reference!: string | null;
 
   @Column()
@@ -32,10 +32,10 @@ export class NonConformity {
   @Column({ nullable: true })
   area!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   department!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   detectionMethod!: string | null;
 
   @Column({ type: 'enum', enum: NCSeverity, default: NCSeverity.LOW })
