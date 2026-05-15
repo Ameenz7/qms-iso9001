@@ -60,4 +60,22 @@ export class DocumentsController {
   remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.service.remove(user, id);
   }
+
+  @Post(':id/submit')
+  @Roles(Role.QUALITY_MANAGER, Role.ADMIN_OWNER)
+  submit(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.service.submit(user, id);
+  }
+
+  @Post(':id/approve')
+  @Roles(Role.ADMIN_OWNER)
+  approve(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.service.approve(user, id);
+  }
+
+  @Post(':id/reject')
+  @Roles(Role.ADMIN_OWNER)
+  reject(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.service.reject(user, id);
+  }
 }

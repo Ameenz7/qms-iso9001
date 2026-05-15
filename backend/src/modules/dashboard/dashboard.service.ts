@@ -2,11 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { NonConformity } from '../../entities/non-conformity.entity';
-import { Capa } from '../../entities/capa.entity';
-import { CapaSubtask } from '../../entities/capa-subtask.entity';
 import { QmsDocument } from '../../entities/document.entity';
 import { AuditSchedule } from '../../entities/audit-schedule.entity';
-import { CorrectiveAction } from '../../entities/corrective-action.entity';
+import { CorrectiveAction, ActionStatus } from '../../entities/corrective-action.entity';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
 @Injectable()
@@ -14,10 +12,6 @@ export class DashboardService {
   constructor(
     @InjectRepository(NonConformity)
     private readonly ncRepo: Repository<NonConformity>,
-    @InjectRepository(Capa)
-    private readonly capaRepo: Repository<Capa>,
-    @InjectRepository(CapaSubtask)
-    private readonly subtaskRepo: Repository<CapaSubtask>,
     @InjectRepository(QmsDocument)
     private readonly docRepo: Repository<QmsDocument>,
     @InjectRepository(AuditSchedule)
@@ -38,8 +32,6 @@ export class DashboardService {
       ncOpen,
       ncClosedMonth,
       ncCritical,
-      capaTotal,
-      capaOpen,
       docsTotal,
       docsDraft,
       docsApproved,
@@ -63,34 +55,30 @@ export class DashboardService {
         .andWhere('nc.updatedAt >= :monthStart', { monthStart })
         .getCount(),
       this.ncRepo.count({
-        where: { organizationId: orgId, severity: 'critical' as never },
-      }),
-      this.capaRepo.count({ where: { organizationId: orgId } }),
-      this.capaRepo.count({
-        where: { organizationId: orgId, status: In(['open', 'in_progress']) },
+        where: { organizationId: orgId, severity: 'critical' as any },
       }),
       this.docRepo.count({ where: { organizationId: orgId } }),
       this.docRepo.count({
-        where: { organizationId: orgId, status: 'draft' as never },
+        where: { organizationId: orgId, status: 'draft' as any },
       }),
       this.docRepo.count({
-        where: { organizationId: orgId, status: 'approved' as never },
+        where: { organizationId: orgId, status: 'approved' as any },
       }),
       this.auditRepo.count({
-        where: { organizationId: orgId, status: 'scheduled' as never },
+        where: { organizationId: orgId, status: 'scheduled' as any },
       }),
       this.auditRepo.count({
-        where: { organizationId: orgId, status: 'completed' as never },
+        where: { organizationId: orgId, status: 'completed' as any },
       }),
       this.actionRepo.count({ where: { organizationId: orgId } }),
       this.actionRepo.count({
-        where: { organizationId: orgId, status: 'pending' as never },
+        where: { organizationId: orgId, status: ActionStatus.PENDING },
       }),
       this.actionRepo
         .createQueryBuilder('a')
         .where('a.organizationId = :orgId', { orgId })
-        .andWhere('a.status != :done', { done: 'completed' })
-        .andWhere('a.status != :verified', { verified: 'verified' })
+        .andWhere('a.status != :done', { done: ActionStatus.COMPLETED })
+        .andWhere('a.status != :verified', { verified: ActionStatus.VERIFIED })
         .andWhere('a.dueDate < :now', { now })
         .getCount(),
     ]);
@@ -102,7 +90,6 @@ export class DashboardService {
         closedThisMonth: ncClosedMonth,
         critical: ncCritical,
       },
-      capa: { total: capaTotal, open: capaOpen },
       documents: { total: docsTotal, draft: docsDraft, approved: docsApproved },
       audits: { scheduled: auditsScheduled, completed: auditsCompleted },
       actions: {
@@ -177,12 +164,6 @@ export class DashboardService {
     const orgId = user.organizationId;
     if (!orgId) return [];
 
-    const subtasks = await this.subtaskRepo.find({
-      where: { assigneeId: user.userId, organizationId: orgId },
-      relations: ['capa'],
-      order: { dueDate: 'ASC' },
-    });
-
     const actions = await this.actionRepo.find({
       where: { assignedToId: user.userId, organizationId: orgId },
       relations: ['nc'],
@@ -190,15 +171,6 @@ export class DashboardService {
     });
 
     const tasks = [
-      ...subtasks.map((s) => ({
-        id: s.id,
-        type: 'subtask' as const,
-        title: s.title,
-        status: s.status,
-        dueDate: s.dueDate,
-        reference: s.capa ? `CAPA: ${s.capa.code}` : null,
-        link: s.capaId ? `/capas/${s.capaId}` : null,
-      })),
       ...actions.map((a) => ({
         id: a.id,
         type: 'action' as const,
@@ -206,7 +178,7 @@ export class DashboardService {
         status: a.status,
         dueDate: a.dueDate,
         reference: a.nc ? `NC: ${a.nc.reference ?? a.nc.title}` : null,
-        link: a.ncId ? `/non-conformities` : null,
+        link: a.ncId ? `/non-conformities/${a.ncId}` : null,
       })),
     ];
 
@@ -223,7 +195,6 @@ export class DashboardService {
   private emptyKpis() {
     return {
       nc: { total: 0, open: 0, closedThisMonth: 0, critical: 0 },
-      capa: { total: 0, open: 0 },
       documents: { total: 0, draft: 0, approved: 0 },
       audits: { scheduled: 0, completed: 0 },
       actions: { total: 0, pending: 0, overdue: 0 },

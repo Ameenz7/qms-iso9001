@@ -43,6 +43,10 @@ export class CreateNonConformityDto {
   @IsOptional()
   @IsUUID()
   assignedToId?: string;
+
+  @IsOptional()
+  @IsString()
+  evidenceStorageKey?: string;
 }
 
 export class UpdateNonConformityDto {
@@ -74,11 +78,6 @@ export class UpdateNonConformityDto {
   @IsOptional()
   @IsUUID()
   assignedToId?: string;
-}
-
-export class LinkCapaDto {
-  @IsUUID()
-  capaId!: string;
 }
 
 export class CreateRootCauseDto {
@@ -167,4 +166,12 @@ export class UpdateCorrectiveActionDto {
   @IsOptional()
   @IsBoolean()
   effectivenessVerified?: boolean;
+
+  @IsOptional()
+  @IsString()
+  completionNotes?: string;
+
+  @IsOptional()
+  @IsString()
+  evidenceStorageKey?: string;
 }

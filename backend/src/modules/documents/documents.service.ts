@@ -12,6 +12,8 @@ import { DocumentVersion } from '../../entities/document-version.entity';
 import { AuditService } from '../audit/audit.service';
 import { CreateDocumentDto, UpdateDocumentDto } from './dto/document.dto';
 
+import { DocumentStatus } from '../../common/enums/status.enum';
+
 @Injectable()
 export class DocumentsService {
   constructor(
@@ -118,5 +120,38 @@ export class DocumentsService {
     await this.docRepo.remove(doc);
     await this.audit.log(actor, 'delete', 'Document', id);
     return { success: true };
+  }
+
+  async submit(actor: AuthenticatedUser, id: string) {
+    const doc = await this.findOne(actor, id);
+    if (doc.status !== DocumentStatus.DRAFT) {
+      throw new BadRequestException('Document is not in draft status');
+    }
+    doc.status = DocumentStatus.UNDER_REVIEW;
+    await this.docRepo.save(doc);
+    await this.audit.log(actor, 'submit', 'Document', id);
+    return doc;
+  }
+
+  async approve(actor: AuthenticatedUser, id: string) {
+    const doc = await this.findOne(actor, id);
+    if (doc.status !== DocumentStatus.UNDER_REVIEW) {
+      throw new BadRequestException('Document is not under review');
+    }
+    doc.status = DocumentStatus.APPROVED;
+    await this.docRepo.save(doc);
+    await this.audit.log(actor, 'approve', 'Document', id);
+    return doc;
+  }
+
+  async reject(actor: AuthenticatedUser, id: string) {
+    const doc = await this.findOne(actor, id);
+    if (doc.status !== DocumentStatus.UNDER_REVIEW) {
+      throw new BadRequestException('Document is not under review');
+    }
+    doc.status = DocumentStatus.DRAFT;
+    await this.docRepo.save(doc);
+    await this.audit.log(actor, 'reject', 'Document', id);
+    return doc;
   }
 }

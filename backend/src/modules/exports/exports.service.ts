@@ -2,7 +2,6 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NonConformity } from '../../entities/non-conformity.entity';
-import { Capa } from '../../entities/capa.entity';
 import { QmsDocument } from '../../entities/document.entity';
 import { AuditSchedule } from '../../entities/audit-schedule.entity';
 import { AuditLog } from '../../entities/audit-log.entity';
@@ -17,8 +16,6 @@ export class ExportsService {
   constructor(
     @InjectRepository(NonConformity)
     private readonly ncRepo: Repository<NonConformity>,
-    @InjectRepository(Capa)
-    private readonly capaRepo: Repository<Capa>,
     @InjectRepository(QmsDocument)
     private readonly docRepo: Repository<QmsDocument>,
     @InjectRepository(AuditSchedule)
@@ -50,32 +47,6 @@ export class ExportsService {
         ? `${nc.assignedTo.firstName} ${nc.assignedTo.lastName}`
         : '',
       'Created At': nc.createdAt?.toISOString(),
-    }));
-  }
-
-  async exportCapas(user: AuthenticatedUser): Promise<ExportRow[]> {
-    if (!user.organizationId) throw new ForbiddenException('No organization');
-    const capas = await this.capaRepo.find({
-      where: { organizationId: user.organizationId },
-      relations: ['createdBy', 'assignedTo'],
-      order: { createdAt: 'DESC' },
-    });
-    return capas.map((c) => ({
-      Code: c.code,
-      Title: c.title,
-      Description: c.description,
-      Status: c.status,
-      'Root Cause': c.rootCause,
-      'Corrective Action': c.correctiveAction,
-      'Preventive Action': c.preventiveAction,
-      'Due Date': c.dueDate?.toISOString(),
-      'Created By': c.createdBy
-        ? `${c.createdBy.firstName} ${c.createdBy.lastName}`
-        : '',
-      'Assigned To': c.assignedTo
-        ? `${c.assignedTo.firstName} ${c.assignedTo.lastName}`
-        : '',
-      'Created At': c.createdAt?.toISOString(),
     }));
   }
 

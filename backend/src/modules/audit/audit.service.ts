@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { createHash } from 'crypto';
 import { AuditLog } from '../../entities/audit-log.entity';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -20,6 +20,7 @@ export class AuditService {
     metadata?: Record<string, unknown>,
     oldValues?: Record<string, unknown>,
     newValues?: Record<string, unknown>,
+    trx?: EntityManager,
   ): Promise<void> {
     const lastLog = await this.auditRepo.findOne({
       where: {},
@@ -47,7 +48,12 @@ export class AuditService {
       ...logData,
       hashChain: currentHash,
     });
-    await this.auditRepo.save(log);
+
+    if (trx) {
+      await trx.getRepository(AuditLog).save(log);
+    } else {
+      await this.auditRepo.save(log);
+    }
   }
 
   async list(

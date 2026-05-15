@@ -8,8 +8,6 @@ import {
   AuditLog,
   AuditSchedule,
   AuthUser,
-  Capa,
-  CapaSubtask,
   ChartData,
   CorrectiveAction,
   CreateInviteResponse,
@@ -18,6 +16,8 @@ import {
   DashboardTask,
   DocumentAttachment,
   DocumentShare,
+  Evidence,
+  EvidenceEntityType,
   InviteVerifyResponse,
   NonConformity,
   Organization,
@@ -197,97 +197,65 @@ export class ApiService {
       body,
     );
   }
-  deleteCorrectiveAction(
-    ncId: string,
-    actionId: string,
-  ): Observable<void> {
+  deleteCorrectiveAction(ncId: string, actionId: string): Observable<void> {
     return this.http.delete<void>(
       `${this.base}/non-conformities/${ncId}/actions/${actionId}`,
     );
   }
 
-  // CAPAs
-  listCapas(): Observable<Capa[]> {
-    return this.http.get<Capa[]>(`${this.base}/capas`);
-  }
-  getCapa(id: string): Observable<Capa> {
-    return this.http.get<Capa>(`${this.base}/capas/${id}`);
-  }
-  createCapa(body: unknown): Observable<Capa> {
-    return this.http.post<Capa>(`${this.base}/capas`, body);
-  }
-  updateCapa(id: string, body: unknown): Observable<Capa> {
-    return this.http.patch<Capa>(`${this.base}/capas/${id}`, body);
-  }
-  deleteCapa(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.base}/capas/${id}`);
-  }
-  promoteNcToCapa(
+  completeAction(
     ncId: string,
-    body: { title?: string; code?: string } = {},
-  ): Observable<Capa> {
-    return this.http.post<Capa>(`${this.base}/capas/from-nc/${ncId}`, body);
-  }
-  updateCapaFiveWhys(
-    id: string,
-    body: { fiveWhys: string[]; rootCause?: string },
-  ): Observable<Capa> {
-    return this.http.patch<Capa>(`${this.base}/capas/${id}/five-whys`, body);
-  }
-  listCapaSubtasks(capaId: string): Observable<CapaSubtask[]> {
-    return this.http.get<CapaSubtask[]>(
-      `${this.base}/capas/${capaId}/subtasks`,
-    );
-  }
-  createCapaSubtask(
-    capaId: string,
-    body: {
-      title: string;
-      description?: string;
-      assigneeId?: string;
-      dueDate?: string;
-    },
-  ): Observable<CapaSubtask> {
-    return this.http.post<CapaSubtask>(
-      `${this.base}/capas/${capaId}/subtasks`,
+    actionId: string,
+    body: { notes: string; evidenceStorageKey?: string },
+  ): Observable<CorrectiveAction> {
+    return this.http.post<CorrectiveAction>(
+      `${this.base}/non-conformities/${ncId}/actions/${actionId}/complete`,
       body,
     );
   }
-  updateCapaSubtask(
-    subtaskId: string,
-    body: Partial<{
-      title: string;
-      description: string;
-      status: string;
-      assigneeId: string | null;
-      dueDate: string | null;
-    }>,
-  ): Observable<CapaSubtask> {
-    return this.http.patch<CapaSubtask>(
-      `${this.base}/capas/subtasks/${subtaskId}`,
+
+  verifyAction(
+    ncId: string,
+    actionId: string,
+    body: { approved: boolean; rejectionReason?: string },
+  ): Observable<CorrectiveAction> {
+    return this.http.post<CorrectiveAction>(
+      `${this.base}/non-conformities/${ncId}/actions/${actionId}/verify`,
       body,
     );
   }
-  deleteCapaSubtask(subtaskId: string): Observable<void> {
-    return this.http.delete<void>(`${this.base}/capas/subtasks/${subtaskId}`);
-  }
-  mySubtasks(): Observable<CapaSubtask[]> {
-    return this.http.get<CapaSubtask[]>(`${this.base}/capas/my-subtasks`);
-  }
-  submitCapaForValidation(id: string): Observable<Capa> {
-    return this.http.post<Capa>(
-      `${this.base}/capas/${id}/submit-for-validation`,
-      {},
+
+  // Evidence management
+  uploadEvidence(
+    entityId: string,
+    entityType: EvidenceEntityType,
+    file: File,
+  ): Observable<Evidence> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<Evidence>(
+      `${this.base}/evidences/upload?entityId=${entityId}&entityType=${entityType}`,
+      form,
     );
   }
-  validateCapa(id: string): Observable<Capa> {
-    return this.http.post<Capa>(`${this.base}/capas/${id}/validate`, {});
+
+  listEvidences(
+    entityId: string,
+    entityType: EvidenceEntityType,
+  ): Observable<Evidence[]> {
+    return this.http.get<Evidence[]>(
+      `${this.base}/evidences?entityId=${entityId}&entityType=${entityType}`,
+    );
   }
-  rejectCapaValidation(id: string, reason?: string): Observable<Capa> {
-    return this.http.post<Capa>(`${this.base}/capas/${id}/reject`, { reason });
+
+  deleteEvidence(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/evidences/${id}`);
   }
-  reopenCapa(id: string, reason?: string): Observable<Capa> {
-    return this.http.post<Capa>(`${this.base}/capas/${id}/reopen`, { reason });
+
+  downloadEvidence(id: string): Observable<Blob> {
+    return this.http.get(`${this.base}/evidences/${id}/download`, {
+      responseType: 'blob',
+    });
   }
 
   // Documents
@@ -305,6 +273,49 @@ export class ApiService {
   }
   deleteDocument(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/documents/${id}`);
+  }
+
+  submitDocument(id: string): Observable<QmsDocument> {
+    return this.http.post<QmsDocument>(`${this.base}/documents/${id}/submit`, {});
+  }
+
+  approveDocument(id: string): Observable<QmsDocument> {
+    return this.http.post<QmsDocument>(`${this.base}/documents/${id}/approve`, {});
+  }
+
+  rejectDocument(id: string): Observable<QmsDocument> {
+    return this.http.post<QmsDocument>(`${this.base}/documents/${id}/reject`, {});
+  }
+
+  downloadDocumentPdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.base}/documents/${id}/pdf`, {
+      responseType: 'blob',
+    });
+  }
+
+  createDocumentWithPdf(
+    body: { code: string; title: string },
+    pdf: File,
+  ): Observable<QmsDocument> {
+    const form = new FormData();
+    form.append('code', body.code);
+    form.append('title', body.title);
+    form.append('pdf', pdf, pdf.name);
+    return this.http.post<QmsDocument>(`${this.base}/documents`, form);
+  }
+
+  updateDocumentWithPdf(
+    id: string,
+    body: { title?: string; changeNote?: string; status?: string; content?: string | null },
+    pdf?: File,
+  ): Observable<QmsDocument> {
+    const form = new FormData();
+    if (body.title) form.append('title', body.title);
+    if (body.changeNote) form.append('changeNote', body.changeNote);
+    if (body.status) form.append('status', body.status);
+    if (body.content !== undefined) form.append('content', body.content || '');
+    if (pdf) form.append('pdf', pdf, pdf.name);
+    return this.http.patch<QmsDocument>(`${this.base}/documents/${id}`, form);
   }
 
   // Document Attachments

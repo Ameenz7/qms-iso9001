@@ -8,8 +8,8 @@ export class CreateDocumentDto {
   @IsNotEmpty()
   title!: string;
 
-  @IsNotEmpty()
-  content!: string;
+  @IsOptional()
+  content?: string;
 }
 
 export class UpdateDocumentDto {

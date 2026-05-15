@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Capa } from '../../entities/capa.entity';
 import { NonConformity } from '../../entities/non-conformity.entity';
 import { RootCause } from '../../entities/root-cause.entity';
 import { CorrectiveAction } from '../../entities/corrective-action.entity';
@@ -11,7 +10,6 @@ import { NonConformitiesService } from './non-conformities.service';
   imports: [
     TypeOrmModule.forFeature([
       NonConformity,
-      Capa,
       RootCause,
       CorrectiveAction,
     ]),

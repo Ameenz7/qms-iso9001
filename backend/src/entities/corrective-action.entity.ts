@@ -111,6 +111,9 @@ export class CorrectiveAction {
   @JoinColumn({ name: 'createdById' })
   createdBy!: User;
 
+  @Column({ type: 'text', nullable: true })
+  completionNotes!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

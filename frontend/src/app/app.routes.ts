@@ -67,50 +67,44 @@ export const routes: Routes = [
         canActivate: [
           roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
         ],
-        loadComponent: () =>
-          import(
-            './features/non-conformities/non-conformities.component'
-          ).then((m) => m.NonConformitiesComponent),
-      },
-      {
-        path: 'non-conformities/:id',
-        canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import(
+                './features/non-conformities/pages/nc-list.component'
+              ).then((m) => m.NcListComponent),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import(
+                './features/non-conformities/pages/nc-detail.component'
+              ).then((m) => m.NcDetailComponent),
+          },
         ],
-        loadComponent: () =>
-          import(
-            './features/non-conformities/nc-detail.component'
-          ).then((m) => m.NcDetailComponent),
-      },
-      {
-        path: 'capas',
-        canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
-        ],
-        loadComponent: () =>
-          import('./features/capas/capas.component').then(
-            (m) => m.CapasComponent,
-          ),
-      },
-      {
-        path: 'capas/:id',
-        canActivate: [
-          roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
-        ],
-        loadComponent: () =>
-          import('./features/capas/capa-detail.component').then(
-            (m) => m.CapaDetailComponent,
-          ),
       },
       {
         path: 'documents',
         canActivate: [
           roleGuard(Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE),
         ],
-        loadComponent: () =>
-          import('./features/documents/documents.component').then(
-            (m) => m.DocumentsComponent,
-          ),
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./features/documents/pages/document-list.component').then(
+                (m) => m.DocumentListComponent,
+              ),
+          },
+          {
+            path: ':id',
+            loadComponent: () =>
+              import(
+                './features/documents/pages/document-detail.component'
+              ).then((m) => m.DocumentDetailComponent),
+          },
+        ],
       },
       {
         path: 'audit-logs',

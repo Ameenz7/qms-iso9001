@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NonConformity } from '../../entities/non-conformity.entity';
-import { Capa } from '../../entities/capa.entity';
 import { QmsDocument } from '../../entities/document.entity';
 import { AuditSchedule } from '../../entities/audit-schedule.entity';
 import { AuditLog } from '../../entities/audit-log.entity';
@@ -12,7 +11,6 @@ import { ExportsController } from './exports.controller';
   imports: [
     TypeOrmModule.forFeature([
       NonConformity,
-      Capa,
       QmsDocument,
       AuditSchedule,
       AuditLog,

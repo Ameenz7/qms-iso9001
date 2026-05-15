@@ -240,6 +240,10 @@ export class InvitesService {
         'accept-invite',
         'User',
         savedUser.id,
+        undefined,
+        undefined,
+        undefined,
+        trx,
       );
 
       return { id: savedUser.id, email: savedUser.email };

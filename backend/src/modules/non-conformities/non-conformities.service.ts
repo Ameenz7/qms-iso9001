@@ -9,7 +9,6 @@ import { Repository } from 'typeorm';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { NCStatus } from '../../common/enums/status.enum';
-import { Capa } from '../../entities/capa.entity';
 import { NonConformity } from '../../entities/non-conformity.entity';
 import { RootCause } from '../../entities/root-cause.entity';
 import {
@@ -21,7 +20,6 @@ import {
   CreateCorrectiveActionDto,
   CreateNonConformityDto,
   CreateRootCauseDto,
-  LinkCapaDto,
   UpdateCorrectiveActionDto,
   UpdateNonConformityDto,
   UpdateRootCauseDto,
@@ -32,7 +30,6 @@ export class NonConformitiesService {
   constructor(
     @InjectRepository(NonConformity)
     private readonly ncRepo: Repository<NonConformity>,
-    @InjectRepository(Capa) private readonly capaRepo: Repository<Capa>,
     @InjectRepository(RootCause)
     private readonly rootCauseRepo: Repository<RootCause>,
     @InjectRepository(CorrectiveAction)
@@ -48,7 +45,6 @@ export class NonConformitiesService {
       .createQueryBuilder('nc')
       .leftJoinAndSelect('nc.submittedBy', 'submittedBy')
       .leftJoinAndSelect('nc.assignedTo', 'assignedTo')
-      .leftJoinAndSelect('nc.capa', 'capa')
       .leftJoinAndSelect('nc.rootCauses', 'rootCauses')
       .leftJoinAndSelect('nc.correctiveActions', 'correctiveActions')
       .where('nc.organizationId = :orgId', { orgId: actor.organizationId })
@@ -66,7 +62,6 @@ export class NonConformitiesService {
       relations: [
         'submittedBy',
         'assignedTo',
-        'capa',
         'rootCauses',
         'rootCauses.verifiedBy',
         'rootCauses.actions',
@@ -113,23 +108,6 @@ export class NonConformitiesService {
     Object.assign(nc, dto);
     const saved = await this.ncRepo.save(nc);
     await this.audit.log(actor, 'update', 'NonConformity', id, { ...dto });
-    return saved;
-  }
-
-  async linkToCapa(actor: AuthenticatedUser, id: string, dto: LinkCapaDto) {
-    const nc = await this.findOne(actor, id);
-    const capa = await this.capaRepo.findOne({ where: { id: dto.capaId } });
-    if (!capa) throw new NotFoundException('CAPA not found');
-    if (capa.organizationId !== nc.organizationId) {
-      throw new ForbiddenException();
-    }
-    nc.capaId = capa.id;
-    nc.status = NCStatus.LINKED;
-    const saved = await this.ncRepo.save(nc);
-    await this.audit.log(actor, 'link_capa', 'NonConformity', id, {
-      capaId: capa.id,
-      capaCode: capa.code,
-    });
     return saved;
   }
 
@@ -259,6 +237,49 @@ export class NonConformitiesService {
     await this.audit.log(actor, 'update', 'CorrectiveAction', actionId, {
       ...dto,
     });
+    return saved;
+  }
+
+  async completeAction(
+    actor: AuthenticatedUser,
+    ncId: string,
+    actionId: string,
+    body: { notes: string; evidenceStorageKey?: string },
+  ) {
+    const action = await this.actionRepo.findOne({ where: { id: actionId, ncId } });
+    if (!action) throw new NotFoundException('Action not found');
+    if (actor.role === Role.EMPLOYEE && action.assignedToId !== actor.userId) {
+      throw new ForbiddenException('Not assigned to this action');
+    }
+
+    action.status = ActionStatus.COMPLETED;
+    action.completionDate = new Date();
+    action.completionNotes = body.notes;
+
+    const saved = await this.actionRepo.save(action);
+    await this.audit.log(actor, 'complete_action', 'CorrectiveAction', actionId);
+    return saved;
+  }
+
+  async verifyAction(
+    actor: AuthenticatedUser,
+    ncId: string,
+    actionId: string,
+    body: { approved: boolean; rejectionReason?: string },
+  ) {
+    const action = await this.actionRepo.findOne({ where: { id: actionId, ncId } });
+    if (!action) throw new NotFoundException('Action not found');
+
+    if (body.approved) {
+      action.status = ActionStatus.VERIFIED;
+      action.effectivenessVerified = true;
+    } else {
+      action.status = ActionStatus.PENDING;
+      action.completionNotes = `Rejected: ${body.rejectionReason}. Previous notes: ${action.completionNotes}`;
+    }
+
+    const saved = await this.actionRepo.save(action);
+    await this.audit.log(actor, body.approved ? 'verify_action' : 'reject_action', 'CorrectiveAction', actionId);
     return saved;
   }
 

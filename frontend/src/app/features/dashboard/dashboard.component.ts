@@ -7,13 +7,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import {
-  CAPAStatus,
-  CapaSubtask,
-  CapaSubtaskStatus,
+  ActionStatus,
+  CorrectiveAction,
   DashboardKpis,
   ROLE_LABELS,
   Role,
@@ -60,13 +59,6 @@ import {
         </div>
       </mat-card>
       <mat-card class="stat" *ngIf="canSeeQms">
-        <mat-icon>build_circle</mat-icon>
-        <div>
-          <div class="num">{{ stats().capas }}</div>
-          <div class="label">CAPAs</div>
-        </div>
-      </mat-card>
-      <mat-card class="stat" *ngIf="canSeeQms">
         <mat-icon>description</mat-icon>
         <div>
           <div class="num">{{ stats().documents }}</div>
@@ -91,7 +83,7 @@ import {
 
     <mat-card class="tasks" *ngIf="canSeeQms">
       <div class="tasks-head">
-        <h3>My Tasks</h3>
+        <h3>My Actions</h3>
         <span class="muted">
           {{ openTaskCount() }} open
           <ng-container *ngIf="overdueCount()">
@@ -100,16 +92,15 @@ import {
         </span>
       </div>
       <p class="muted" *ngIf="!myTasks().length">
-        You have no CAPA subtasks assigned to you.
+        You have no actions assigned to you.
       </p>
       <ul class="task-list" *ngIf="myTasks().length">
         <li *ngFor="let t of myTasks()">
           <div class="t-main">
-            <a [routerLink]="['/capas', t.capaId]" class="t-title">
-              {{ t.title }}
+            <a routerLink="/non-conformities" class="t-title">
+              {{ t.description }}
             </a>
             <div class="muted small">
-              <span *ngIf="t.capa">{{ t.capa.code }} &middot; </span>
               <span *ngIf="t.dueDate">
                 Due {{ t.dueDate | date: 'mediumDate' }}
                 <span
@@ -121,15 +112,7 @@ import {
               <span *ngIf="!t.dueDate">No due date</span>
             </div>
           </div>
-          <mat-select
-            [value]="t.status"
-            [disabled]="!canUpdateTask(t)"
-            (selectionChange)="updateTaskStatus(t, $event.value)"
-            class="t-status">
-            <mat-option [value]="'todo'">To do</mat-option>
-            <mat-option [value]="'in_progress'">In progress</mat-option>
-            <mat-option [value]="'done'">Done</mat-option>
-          </mat-select>
+          <span class="chip" [class]="'astatus-' + t.status">{{ t.status }}</span>
         </li>
       </ul>
     </mat-card>
@@ -145,9 +128,6 @@ import {
         </a>
         <a *ngIf="canSeeQms" routerLink="/non-conformities">
           <mat-icon>report_problem</mat-icon> Non-Conformities
-        </a>
-        <a *ngIf="canSeeQms" routerLink="/capas">
-          <mat-icon>build_circle</mat-icon> CAPAs
         </a>
         <a *ngIf="canSeeQms" routerLink="/documents">
           <mat-icon>description</mat-icon> Documents
@@ -273,14 +253,13 @@ export class DashboardComponent {
   private snack = inject(MatSnackBar);
 
   user = this.auth.user;
-  myTasks = signal<CapaSubtask[]>([]);
+  myTasks = signal<CorrectiveAction[]>([]);
   kpis = signal<DashboardKpis | null>(null);
 
   stats = signal({
     organizations: 0,
     users: 0,
     ncs: 0,
-    capas: 0,
     documents: 0,
   });
 
@@ -319,9 +298,6 @@ export class DashboardComponent {
       ncs: this.canSeeQms
         ? this.api.listNcs().pipe(catchError(() => of([])))
         : of([]),
-      capas: this.canSeeQms
-        ? this.api.listCapas().pipe(catchError(() => of([])))
-        : of([]),
       documents: this.canSeeQms
         ? this.api.listDocuments().pipe(catchError(() => of([])))
         : of([]),
@@ -330,7 +306,6 @@ export class DashboardComponent {
         organizations: data.organizations.length,
         users: data.users.length,
         ncs: data.ncs.length,
-        capas: data.capas.length,
         documents: data.documents.length,
       });
     });
@@ -340,55 +315,46 @@ export class DashboardComponent {
       this.api
         .getDashboardKpis()
         .pipe(catchError(() => of(null)))
-        .subscribe((k) => { if (k) this.kpis.set(k); });
+        .subscribe((k) => {
+          if (k) this.kpis.set(k);
+        });
     }
   }
 
   private loadMyTasks() {
     this.api
-      .mySubtasks()
-      .pipe(catchError(() => of([] as CapaSubtask[])))
+      .listNcs()
+      .pipe(
+        catchError(() => of([])),
+        map((ncs: any[]) => {
+          const allActions: CorrectiveAction[] = [];
+          ncs.forEach((nc) => {
+            if (nc.correctiveActions) {
+              nc.correctiveActions.forEach((a: CorrectiveAction) => {
+                if (a.assignedToId === this.user()?.id) {
+                  allActions.push(a);
+                }
+              });
+            }
+          });
+          return allActions;
+        }),
+      )
       .subscribe((t) => this.myTasks.set(t));
   }
 
   openTaskCount(): number {
-    return this.myTasks().filter(
-      (t) => t.status !== CapaSubtaskStatus.DONE,
-    ).length;
+    return this.myTasks().filter((t) => t.status === ActionStatus.PENDING)
+      .length;
   }
 
   overdueCount(): number {
     return this.myTasks().filter((t) => this.isOverdue(t)).length;
   }
 
-  isOverdue(t: CapaSubtask): boolean {
-    if (!t.dueDate || t.status === CapaSubtaskStatus.DONE) return false;
+  isOverdue(t: CorrectiveAction): boolean {
+    if (!t.dueDate || t.status === ActionStatus.VERIFIED) return false;
     return new Date(t.dueDate).getTime() < Date.now();
-  }
-
-  canUpdateTask(t: CapaSubtask): boolean {
-    const capaStatus = t.capa?.status;
-    if (
-      capaStatus === CAPAStatus.CLOSED ||
-      capaStatus === CAPAStatus.PENDING_VALIDATION
-    ) {
-      return false;
-    }
-    return true;
-  }
-
-  updateTaskStatus(t: CapaSubtask, value: CapaSubtaskStatus) {
-    if (value === t.status) return;
-    this.api.updateCapaSubtask(t.id, { status: value }).subscribe({
-      next: () => {
-        this.snack.open('Task updated', 'OK', { duration: 2000 });
-        this.loadMyTasks();
-      },
-      error: (e) =>
-        this.snack.open(e?.error?.message || 'Error', 'Close', {
-          duration: 4000,
-        }),
-    });
   }
 
   // for template reference

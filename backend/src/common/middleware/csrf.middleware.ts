@@ -39,7 +39,11 @@ export class CsrfMiddleware implements NestMiddleware {
     const cookieToken = req.cookies?.[CSRF_COOKIE];
     const headerToken = req.header(CSRF_HEADER);
 
-    if (!cookieToken || !headerToken || !constantTimeEquals(cookieToken, headerToken)) {
+    if (
+      !cookieToken ||
+      !headerToken ||
+      !constantTimeEquals(cookieToken, headerToken)
+    ) {
       throw new ForbiddenException('Invalid CSRF token');
     }
     return next();
@@ -55,7 +59,9 @@ export class CsrfMiddleware implements NestMiddleware {
       path: '/',
     });
     // Make it readable on this same response too so the first caller can use it.
-    (req as Request & { cookies: Record<string, string> }).cookies[CSRF_COOKIE] = token;
+    (req as Request & { cookies: Record<string, string> }).cookies[
+      CSRF_COOKIE
+    ] = token;
   }
 }
 

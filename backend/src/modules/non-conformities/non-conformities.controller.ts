@@ -20,7 +20,6 @@ import {
   CreateCorrectiveActionDto,
   CreateNonConformityDto,
   CreateRootCauseDto,
-  LinkCapaDto,
   UpdateCorrectiveActionDto,
   UpdateNonConformityDto,
   UpdateRootCauseDto,
@@ -61,16 +60,6 @@ export class NonConformitiesController {
     @Body() dto: UpdateNonConformityDto,
   ) {
     return this.service.update(user, id, dto);
-  }
-
-  @Post(':id/link-capa')
-  @Roles(Role.QUALITY_MANAGER, Role.ADMIN_OWNER)
-  link(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-    @Body() dto: LinkCapaDto,
-  ) {
-    return this.service.linkToCapa(user, id, dto);
   }
 
   @Delete(':id')
@@ -141,5 +130,27 @@ export class NonConformitiesController {
     @Param('actionId') actionId: string,
   ) {
     return this.service.deleteAction(user, id, actionId);
+  }
+
+  @Post(':id/actions/:actionId/complete')
+  @Roles(Role.EMPLOYEE, Role.QUALITY_MANAGER, Role.ADMIN_OWNER)
+  completeAction(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('actionId') actionId: string,
+    @Body() body: { notes: string; evidenceStorageKey?: string },
+  ) {
+    return this.service.completeAction(user, id, actionId, body);
+  }
+
+  @Post(':id/actions/:actionId/verify')
+  @Roles(Role.QUALITY_MANAGER, Role.ADMIN_OWNER)
+  verifyAction(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('actionId') actionId: string,
+    @Body() body: { approved: boolean; rejectionReason?: string },
+  ) {
+    return this.service.verifyAction(user, id, actionId, body);
   }
 }

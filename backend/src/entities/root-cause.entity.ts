@@ -90,7 +90,7 @@ export class RootCause {
   @Column({ default: false })
   isPrimary!: boolean;
 
-  @OneToMany(() => CorrectiveAction, (a) => a.rootCause)
+  @OneToMany(() => CorrectiveAction, (a) => a.rootCause, { cascade: true })
   actions!: CorrectiveAction[];
 
   @CreateDateColumn()

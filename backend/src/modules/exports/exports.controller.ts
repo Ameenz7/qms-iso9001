@@ -27,9 +27,6 @@ export class ExportsController {
       case 'non-conformities':
         rows = await this.service.exportNcs(user);
         break;
-      case 'capas':
-        rows = await this.service.exportCapas(user);
-        break;
       case 'documents':
         rows = await this.service.exportDocuments(user);
         break;
@@ -62,8 +59,6 @@ export class ExportsController {
     switch (mod) {
       case 'non-conformities':
         return this.service.exportNcs(user);
-      case 'capas':
-        return this.service.exportCapas(user);
       case 'documents':
         return this.service.exportDocuments(user);
       case 'audits':

@@ -165,12 +165,6 @@ export class MainLayoutComponent {
       roles: [Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE],
     },
     {
-      label: 'CAPAs',
-      icon: 'build_circle',
-      link: '/capas',
-      roles: [Role.ADMIN_OWNER, Role.QUALITY_MANAGER, Role.EMPLOYEE],
-    },
-    {
       label: 'Documents',
       icon: 'description',
       link: '/documents',

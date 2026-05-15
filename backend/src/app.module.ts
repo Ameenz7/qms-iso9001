@@ -6,8 +6,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ValidationPipe } from '@nestjs/common';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 import { AuditLog } from './entities/audit-log.entity';
-import { Capa } from './entities/capa.entity';
-import { CapaSubtask } from './entities/capa-subtask.entity';
 import { DocumentAttachment } from './entities/document-attachment.entity';
 import { DocumentShare } from './entities/document-share.entity';
 import { DocumentVersion } from './entities/document-version.entity';
@@ -19,12 +17,12 @@ import { UserInvite } from './entities/user-invite.entity';
 import { User } from './entities/user.entity';
 import { RootCause } from './entities/root-cause.entity';
 import { CorrectiveAction } from './entities/corrective-action.entity';
+import { Evidence } from './entities/evidence.entity';
 import { AuditSchedule } from './entities/audit-schedule.entity';
 import { AuditChecklistItem } from './entities/audit-checklist-item.entity';
 import { AuditFinding } from './entities/audit-finding.entity';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { CapasModule } from './modules/capas/capas.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { InvitesModule } from './modules/invites/invites.module';
 import { MailerModule } from './modules/mailer/mailer.module';
@@ -33,6 +31,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { SeedModule } from './modules/seed/seed.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { UsersModule } from './modules/users/users.module';
+import { EvidenceModule } from './modules/evidence/evidence.module';
 import { AuditScheduleModule } from './modules/audit-schedule/audit-schedule.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { SettingsModule } from './modules/settings/settings.module';
@@ -62,11 +61,10 @@ import { ExportsModule } from './modules/exports/exports.module';
           DocumentAttachment,
           DocumentShare,
           NonConformity,
-          Capa,
-          CapaSubtask,
           AuditLog,
           RootCause,
           CorrectiveAction,
+          Evidence,
           AuditSchedule,
           AuditChecklistItem,
           AuditFinding,
@@ -82,7 +80,7 @@ import { ExportsModule } from './modules/exports/exports.module';
     InvitesModule,
     OrganizationsModule,
     NonConformitiesModule,
-    CapasModule,
+    EvidenceModule,
     DocumentsModule,
     SeedModule,
     AuditScheduleModule,

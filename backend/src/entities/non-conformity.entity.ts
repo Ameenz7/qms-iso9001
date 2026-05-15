@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { NCSeverity, NCStatus } from '../common/enums/status.enum';
-import { Capa } from './capa.entity';
 import { Organization } from './organization.entity';
 import { User } from './user.entity';
 import { RootCause } from './root-cause.entity';
@@ -64,16 +63,6 @@ export class NonConformity {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'assignedToId' })
   assignedTo!: User | null;
-
-  @ManyToOne(() => Capa, (c) => c.nonConformities, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'capaId' })
-  capa!: Capa | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  capaId!: string | null;
 
   @Column({ type: 'timestamptz', nullable: true })
   closureDate!: Date | null;

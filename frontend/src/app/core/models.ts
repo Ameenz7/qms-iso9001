@@ -224,6 +224,28 @@ export interface RootCause {
   updatedAt: string;
 }
 
+export enum EvidenceEntityType {
+  NC = 'nc',
+  ACTION = 'action',
+  AUDIT = 'audit',
+  AUDIT_FINDING = 'audit_finding',
+  DOCUMENT = 'document',
+}
+
+export interface Evidence {
+  id: string;
+  organizationId: string;
+  entityId: string;
+  entityType: EvidenceEntityType;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  uploadedById: string;
+  uploadedBy?: AuthUser;
+  createdAt: string;
+}
+
 export interface CorrectiveAction {
   id: string;
   organizationId: string;
@@ -238,6 +260,7 @@ export interface CorrectiveAction {
   dueDate: string | null;
   status: ActionStatus;
   completionDate: string | null;
+  completionNotes: string | null;
   effectivenessCheckRequired: boolean;
   effectivenessVerified: boolean;
   createdById: string;
@@ -260,8 +283,6 @@ export interface NonConformity {
   submittedBy?: AuthUser;
   assignedToId?: string | null;
   assignedTo?: AuthUser | null;
-  capaId: string | null;
-  capa?: Capa | null;
   closureDate?: string | null;
   rootCauses?: RootCause[];
   correctiveActions?: CorrectiveAction[];
@@ -269,57 +290,13 @@ export interface NonConformity {
   updatedAt: string;
 }
 
-export interface Capa {
-  id: string;
-  code: string;
-  title: string;
-  description: string;
-  rootCause: string | null;
-  correctiveAction: string | null;
-  preventiveAction: string | null;
-  verification: string | null;
-  status: CAPAStatus;
-  dueDate: string | null;
-  createdById: string;
-  assignedToId: string | null;
-  createdBy?: AuthUser;
-  assignedTo?: AuthUser | null;
-  validatedBy?: AuthUser | null;
-  validatedById: string | null;
-  validatedAt: string | null;
-  submittedForValidationAt: string | null;
-  closedAt: string | null;
-  fiveWhys: string[];
-  nonConformities?: NonConformity[];
-  subtasks?: CapaSubtask[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CapaSubtask {
-  id: string;
-  capaId: string;
-  organizationId: string;
-  title: string;
-  description: string | null;
-  status: CapaSubtaskStatus;
-  assigneeId: string | null;
-  assignee?: AuthUser | null;
-  dueDate: string | null;
-  completedAt: string | null;
-  completedById: string | null;
-  completedBy?: AuthUser | null;
-  createdById: string;
-  createdAt: string;
-  updatedAt: string;
-  capa?: Pick<Capa, 'id' | 'code' | 'title' | 'status'>;
-}
-
 export interface DocumentVersion {
   id: string;
   documentId: string;
   version: number;
-  content: string;
+  content: string | null;
+  isPdf?: boolean;
+  pdfStorageKey?: string | null;
   changeNote: string | null;
   createdById: string;
   createdBy?: AuthUser;
@@ -330,7 +307,9 @@ export interface QmsDocument {
   id: string;
   code: string;
   title: string;
-  content: string;
+  content: string | null;
+  isPdf: boolean;
+  pdfStorageKey: string | null;
   version: number;
   status: DocumentStatus;
   createdById: string;
@@ -472,7 +451,6 @@ export interface AuditSchedule {
 // Dashboard types
 export interface DashboardKpis {
   nc: { total: number; open: number; closedThisMonth: number; critical: number };
-  capa: { total: number; open: number };
   documents: { total: number; draft: number; approved: number };
   audits: { scheduled: number; completed: number };
   actions: { total: number; pending: number; overdue: number };
